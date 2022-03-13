@@ -5,13 +5,17 @@ import ij.gui.Roi;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
 import ij.plugin.Duplicator;
+import ij.plugin.PlugIn;
 import ij.plugin.ZProjector;
 import ij.plugin.filter.*;
 import ij.plugin.frame.RoiManager;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
+import ij.util.ArrayUtil;
 
+import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 
 import static ij.plugin.frame.RoiManager.*;
 import static ij.process.AutoThresholder.Method.Default;
@@ -19,17 +23,19 @@ import static ij.process.AutoThresholder.Method.Li;
 
 /*TODO transformer en class plugin pour ouvrir image ?*/
 /*TODO class image avec zprojector fait par defaut ?*/
-public class Nuclei_detect implements PlugInFilter {
+public class Nuclei_detect implements PlugIn {
     ImagePlus imp;
-    public int setup(String s, ImagePlus imagePlus) {
-        /*TODO Dialogue*/
-        this.imp = imagePlus;
-//        return DOES_ALL;
-        return DOES_ALL+STACK_REQUIRED;
-        /*8G ?*/
-    }
+    static JFrame instance; /*only one copy of the plugin */
+//    public int setup(String s, ImagePlus imagePlus) {
+//        /*TODO Dialogue*/
+//        this.imp = imagePlus;
+////        return DOES_ALL;
+//        return DOES_ALL+STACK_REQUIRED;
+//        /*8G ?*/
+//    }
 
-    public void run(ImageProcessor imageProcessor) {
+    public void run(String arg) {
+        createWindow();
 //        TEST OPEN IMAGE
         ImagePlus test = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
         test.show();
@@ -79,7 +85,7 @@ public class Nuclei_detect implements PlugInFilter {
             roiManager_nuclei.select(projection_IP,i);
             analyzer.measure();
         }
-        resultsTable.show("Results");
+        resultsTable.show("Results nuclei");
 
 /*parametre DAPI, choix ouverte/dossier et quelle image correspond a quoi*/
         /*creer JPanel segmentation/deeplearning pour pouvoir switcher*/
@@ -114,16 +120,35 @@ public class Nuclei_detect implements PlugInFilter {
 
         /*Find maxima*/
         MaximumFinder maximumFinder = new MaximumFinder();
+        ResultsTable resultsTable_foci = new ResultsTable();
         for (int i = 0; i < number_nuclei-1; i++) {
             roiManager_nuclei.select(wobkg_IP,i);
             ImageProcessor wobkg_proc = wobkg_IP.getProcessor();
             Polygon maxima = maximumFinder.getMaxima(wobkg_proc,1000,true);
             int nb_maxima = maxima.npoints;
             PointRoi roi_maxima = new PointRoi(maxima);
-            RoiManager roiManager_foci = new RoiManager();
-            roiManager_foci.addRoi(roi_maxima);
+//            RoiManager roiManager_foci = new RoiManager();
+//            roiManager_foci.addRoi(roi_maxima);
             wobkg_IP.setRoi(roi_maxima);
-            Analyzer foci_analyzer = new Analyzer(wobkg_IP,Measurements.MEAN + Measurements.INTEGRATED_DENSITY,)
+            Analyzer foci_analyzer = new Analyzer(wobkg_IP,Measurements.MEAN + Measurements.INTEGRATED_DENSITY,resultsTable_foci);
+            foci_analyzer.measure();
+            resultsTable_foci.show("Results foci");
+            Point [] foci =roi_maxima.getContainedPoints();
+            ArrayList <Float> pixelValue = new ArrayList<>();
+            for (Point p : roi_maxima) {
+                pixelValue.add(wobkg_proc.getPixelValue(p.x,p.y));
+            }
+            float[] roivalue = new float[pixelValue.size()];
+            for (int index = 0; index < pixelValue.size(); index++) {
+                roivalue[index] = pixelValue.get(index);
+            }
+            ArrayUtil roiArray = new ArrayUtil(roivalue);
+            double mean = roiArray.getMean();
+            double max = roiArray.getMaximum();
+            double min = roiArray.getMinimum();
+            double rawInt = roiArray.getMean() * roivalue.length;
+
+            IJ.log("Pour le noyau :" + i + " mean :" + mean + " max:" + max + "min:" +min +" Integrated density:"+rawInt);
 
 //            ByteProcessor tryMaxima =  maximumFinder.findMaxima(wobkg_proc,1000,MaximumFinder.POINT_SELECTION,true);
 //            new ImagePlus("Particule_"+i,tryMaxima).show();
@@ -131,6 +156,18 @@ public class Nuclei_detect implements PlugInFilter {
 //        resultsTable.show("Results");
 //        imageProcessor.setAutoThreshold(Otsu,true);
 //        imageProcessor.getAutoThreshold();
+    }
+
+    private static void createWindow(){
+        JFrame frame = new JFrame("Simple GUI");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JLabel textLabel = new JLabel("COUCOU", SwingConstants.CENTER);
+        textLabel.setPreferredSize(new Dimension(300,100));
+        frame.getContentPane().add(textLabel,BorderLayout.CENTER);
+
+        frame.setLocationRelativeTo(null);
+        frame.pack();
+        frame.setVisible(true);
     }
 }
 //d2s (limite nombre de decimal en string), pad ("001" a partir de 1)

@@ -12,25 +12,14 @@ public class GUI_test implements PlugIn {
     private JRadioButton radioButton2;
     private JTextField textField1;
     private JButton button1;
-    private JFrame frame;
     static JFrame instance; /*only one copy of the plugin */
 
-    public GUI_test() {
-        okButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-
-            }
-        });
-    }
-
-    @Override
     public void run(String s) {
         if (instance != null){
             instance.toFront();
         } else {
-            frame=new JFrame("Nom Plugin");
-            instance=frame;
+            JFrame frame = new JFrame("Nom Plugin");
+            instance= frame;
             frame.setSize(600,250);
         }
     }
