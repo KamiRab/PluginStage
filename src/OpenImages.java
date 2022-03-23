@@ -12,6 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileFilter;
+import java.util.Locale;
 
 import static ij.IJ.selectWindow;
 
@@ -48,22 +49,30 @@ public class OpenImages extends JFrame implements PlugIn {
                 if (directory == null) {
                     IJ.error("No directory chosen");
                 } else {
-                    IJ.log("There are " + IP_list.length + " images");
+                    if (IP_list == null){
+                        IJ.error("No images to analyze");
+                    }else{
+                        IJ.log("There are " + IP_list.length + " images");
+                        Plugin_cellProt analysis = new Plugin_cellProt(IP_list,useDirectory);
+                        analysis.run(null);
+                        this.setVisible(false);
+                    }
                 }
 
             } else {
-                if (windowList.getModel().getSize()==0){
+                if (windowList.getModel().getSize() == 0) {
                     IJ.error("There are no images to analyse");
+                } else {
+                    for (int i = 0; i < windowList.getModel().getSize(); i++) {
+                        IJ.log(windowList.getModel().getElementAt(i).split("#")[0]);
+                    }
+                    IJ.log("There are " + IP_list.length + " images");
+                    Plugin_cellProt analysis = new Plugin_cellProt(IP_list,useDirectory);
+                    analysis.run(null);
+                    this.setVisible(false);
                 }
-                for (int i = 0; i < windowList.getModel().getSize(); i++) {
-                    IJ.log(windowList.getModel().getElementAt(i).split("#")[0]);
-                }
-//                for (String image: listImage
-//                     ) {
-//                    IJ.log(image);
-//                }
-            }
 
+            }
         });
         chooseDirectoryButton.addActionListener(e -> {
             JFileChooser directoryChooser = new JFileChooser();
@@ -115,7 +124,6 @@ public class OpenImages extends JFrame implements PlugIn {
         if (WindowManager.getImageCount() == 0) {
             yesRadioButton.setVisible(false);
             noRadioButton.setVisible(false);
-        } else {
         }
         createUIComponents();
         setTitle("Plugin2Name");
@@ -127,7 +135,9 @@ public class OpenImages extends JFrame implements PlugIn {
     }
 
     private void getFilesFromDirectory() {
-        FileFilter fileFilter = file -> !file.isDirectory() && file.getName().endsWith("" + extension.getItemAt(extension.getSelectedIndex()));
+        FileFilter fileFilter = file -> !file.isDirectory()
+                && (file.getName().endsWith("" + extension.getItemAt(extension.getSelectedIndex()))
+                ||file.getName().endsWith("" + extension.getItemAt(extension.getSelectedIndex()).toLowerCase(Locale.ROOT)));
         File[] images = directory.listFiles(fileFilter);
         if (images != null) {
             if (images.length == 0) {

@@ -17,6 +17,8 @@ import ij.util.ArrayUtil;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,24 +31,12 @@ import static ij.process.AutoThresholder.Method.Li;
 
 
 //TODO plutot jtab pour protein
+//TODO si stack pas coché, message d'erreur
 public class Plugin_cellProt extends JFrame implements PlugIn {
-    private JPanel Nuclei;
-    private JCheckBox nucleiProteinCheckBox;
-    private JCheckBox cytoplasmicProteinCheckBox;
-    private JPanel Cytoplasm;
     private JLabel Plugin_title;
-    private JPanel NucleiOrCytoplasm;
-    private JPanel protein1Quantification;
     private JButton okButton;
     private JButton cancelButton;
-    private JComboBox comboBox2;
-    private JComboBox comboBox3;
-    private JCheckBox isAZStackCheckBox;
-    private JComboBox comboBox4;
-    private JComboBox comboBox5;
-    private JSpinner spinner1;
-    private JCheckBox previewCheckBox;
-    private JCheckBox useAutomaticWatershedCheckBox;
+    private JComboBox calibrationValues;
     private JButton addProtein2;
     private JPanel main;
     private JPanel protein2Quantification;
@@ -54,44 +44,34 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
     private JPanel protein4Quantification;
     private JButton addProtein3;
     private JButton addProtein4;
-    private JPanel panel1;
+    private JPanel general;
+    private JPanel nucleiDetection;
+    private JPanel cytoDetection;
+    private JPanel prot1quanti;
+    private JPanel prot2quanti;
+    private JPanel prot3quanti;
+    private JTabbedPane tabs;
+    private JLabel calibrationLabel;
+    private JLabel analyseProteinsInLabel;
+    private JCheckBox nucleiCheckBox;
+    private JCheckBox cytoplasmCheckBox;
+    private JSpinner nrProteins;
+    private JButton validateMainConfigurationButton;
 
     public Plugin_cellProt() {
         $$$setupUI$$$();
-        protein2Quantification.setVisible(false);
-        protein3Quantification.setVisible(false);
-        protein4Quantification.setVisible(false);
+        /*TODO add tab with spinner*/
+        prot2quanti.setVisible(false);
+        prot3quanti.setVisible(false);
         okButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 launch_Plugin();
             }
         });
-        addProtein2.addActionListener(new ActionListener() {
+        nrProteins.addChangeListener(new ChangeListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                addProtein2.setVisible(false);
-                protein2Quantification.setVisible(true);
-                repaint();
-                revalidate();
-                setVisible(true);
-            }
-        });
-        addProtein3.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addProtein3.setVisible(false);
-                protein3Quantification.setVisible(true);
-                pack();
-                setVisible(true);
-            }
-        });
-        addProtein4.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addProtein4.setVisible(false);
-                protein4Quantification.setVisible(true);
-                pack();
+            public void stateChanged(ChangeEvent e) {
             }
         });
     }
@@ -102,13 +82,12 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
             IJ.log(image.getTitle());
         }
         Plugin_cellProt plugin = new Plugin_cellProt();
-
     }
 
     public void run(String s) {
         setTitle("Plugin2Name");
         setContentPane(new Plugin_cellProt().main);
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+//        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         pack();
         setVisible(true);
     }
@@ -242,6 +221,8 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
     }
 
     private void createUIComponents() {
+        nucleiDetection = new Detect_Nuclei().getMain();
+        nrProteins = new JSpinner();
         // TODO: place custom component creation code here
     }
 
@@ -259,78 +240,32 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
         Plugin_title = new JLabel();
         Plugin_title.setText("PluginToName");
         main.add(Plugin_title, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        NucleiOrCytoplasm = new JPanel();
-        NucleiOrCytoplasm.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(NucleiOrCytoplasm, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        Nuclei = new JPanel();
-        Nuclei.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
-        NucleiOrCytoplasm.add(Nuclei, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        Nuclei.setBorder(BorderFactory.createTitledBorder(null, "Detect nuclei", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        isAZStackCheckBox = new JCheckBox();
-        isAZStackCheckBox.setText("Is a Z-Stack?");
-        Nuclei.add(isAZStackCheckBox, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        panel1.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        Nuclei.add(panel1, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+
+
         final JLabel label1 = new JLabel();
         label1.setText("Threshold Method");
-        panel1.add(label1, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        comboBox5 = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
         defaultComboBoxModel1.addElement("Default");
         defaultComboBoxModel1.addElement("Huang");
         defaultComboBoxModel1.addElement("Li");
         defaultComboBoxModel1.addElement("...");
-        comboBox5.setModel(defaultComboBoxModel1);
-        panel1.add(comboBox5, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Minimum size of nucleus ?");
-        panel1.add(label2, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        spinner1 = new JSpinner();
-        panel1.add(spinner1, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        previewCheckBox = new JCheckBox();
-        previewCheckBox.setText("Preview");
-        Nuclei.add(previewCheckBox, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        useAutomaticWatershedCheckBox = new JCheckBox();
-        useAutomaticWatershedCheckBox.setText("Use automatic watershed");
-        Nuclei.add(useAutomaticWatershedCheckBox, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        comboBox4 = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel2 = new DefaultComboBoxModel();
         defaultComboBoxModel2.addElement("Maximum projection");
         defaultComboBoxModel2.addElement("Standard Deviation projection");
-        comboBox4.setModel(defaultComboBoxModel2);
-        Nuclei.add(comboBox4, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        cytoplasmicProteinCheckBox = new JCheckBox();
-        cytoplasmicProteinCheckBox.setText("Cytoplasmic protein");
-        NucleiOrCytoplasm.add(cytoplasmicProteinCheckBox, new com.intellij.uiDesigner.core.GridConstraints(0, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        nucleiProteinCheckBox = new JCheckBox();
-        nucleiProteinCheckBox.setText("Nuclei protein");
-        NucleiOrCytoplasm.add(nucleiProteinCheckBox, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 1, false));
-        Cytoplasm = new JPanel();
-        Cytoplasm.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        NucleiOrCytoplasm.add(Cytoplasm, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        Cytoplasm.setBorder(BorderFactory.createTitledBorder(null, "Detect cytoplasm", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        comboBox3 = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
         defaultComboBoxModel3.addElement("Segmentation");
         defaultComboBoxModel3.addElement("Deep Learning");
-        comboBox3.setModel(defaultComboBoxModel3);
-        NucleiOrCytoplasm.add(comboBox3, new com.intellij.uiDesigner.core.GridConstraints(0, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JComboBox comboBox1 = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
         defaultComboBoxModel4.addElement("Segmentation");
         defaultComboBoxModel4.addElement("Deep Learning");
         comboBox1.setModel(defaultComboBoxModel4);
-        NucleiOrCytoplasm.add(comboBox1, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        protein1Quantification = new JPanel();
-        protein1Quantification.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(protein1Quantification, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        protein1Quantification.setBorder(BorderFactory.createTitledBorder(null, "Protein 1 quantification", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JLabel label3 = new JLabel();
         label3.setText("Lot of things");
-        protein1Quantification.add(label3, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         addProtein2 = new JButton();
         addProtein2.setText("Add protein channel");
-        protein1Quantification.add(addProtein2, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         protein2Quantification = new JPanel();
         protein2Quantification.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         main.add(protein2Quantification, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -367,16 +302,14 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
         final JLabel label7 = new JLabel();
         label7.setText("Calibration");
         main.add(label7, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        comboBox2 = new JComboBox();
+        calibrationValues = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel5 = new DefaultComboBoxModel();
         defaultComboBoxModel5.addElement("x63");
         defaultComboBoxModel5.addElement("x100");
-        comboBox2.setModel(defaultComboBoxModel5);
-        main.add(comboBox2, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        calibrationValues.setModel(defaultComboBoxModel5);
+        main.add(calibrationValues, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ButtonGroup buttonGroup;
         buttonGroup = new ButtonGroup();
-        buttonGroup.add(nucleiProteinCheckBox);
-        buttonGroup.add(cytoplasmicProteinCheckBox);
     }
 
     /**
@@ -384,6 +317,11 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
      */
     public JComponent $$$getRootComponent$$$() {
         return main;
+    }
+    public static void main(String[] args) {
+
+        Plugin_cellProt plugin = new Plugin_cellProt();
+        plugin.run(null);
     }
 }
 
