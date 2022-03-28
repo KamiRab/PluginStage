@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="Detect_Nuclei">
-  <grid id="27dc6" binding="main" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+  <grid id="27dc6" binding="main" layout-manager="GridLayoutManager" row-count="5" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
       <xy x="20" y="20" width="595" height="400"/>
@@ -11,8 +11,8 @@
       <grid id="ea1c0" binding="zProj" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-            <preferred-size width="487" height="48"/>
+          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <maximum-size width="1000" height="-1"/>
           </grid>
         </constraints>
         <properties/>
@@ -52,7 +52,9 @@
       <grid id="55f52" binding="parameters" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <maximum-size width="1000" height="-1"/>
+          </grid>
         </constraints>
         <properties/>
         <border type="none"/>
@@ -65,19 +67,6 @@
               <text value="Threshold method"/>
             </properties>
           </component>
-          <component id="4c274" class="javax.swing.JComboBox" binding="threshMethods">
-            <constraints>
-              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
-            </constraints>
-            <properties>
-              <model>
-                <item value="Default"/>
-                <item value="Huang"/>
-                <item value="Li"/>
-                <item value="..."/>
-              </model>
-            </properties>
-          </component>
           <component id="cf6bc" class="javax.swing.JLabel" binding="minSizeNucleus_label">
             <constraints>
               <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
@@ -86,15 +75,15 @@
               <text value="Minimum size of nucleus"/>
             </properties>
           </component>
-          <component id="92a1e" class="javax.swing.JSpinner" binding="minSizeNucleus">
+          <component id="92a1e" class="javax.swing.JSpinner" binding="minSizeNucleus" custom-create="true">
             <constraints>
               <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties/>
           </component>
-          <component id="b6fe4" class="javax.swing.JCheckBox" binding="previewCheckBox" default-binding="true">
+          <component id="47626" class="javax.swing.JButton" binding="previewButton" default-binding="true">
             <constraints>
-              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="Preview"/>
@@ -108,27 +97,110 @@
               <text value="Use watershed"/>
             </properties>
           </component>
+          <component id="7d84a" class="javax.swing.JComboBox" binding="threshMethods" custom-create="true">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+          </component>
         </children>
       </grid>
-      <component id="bc255" class="javax.swing.JComboBox" binding="comboBox1" default-binding="true">
+      <grid id="53d7f" binding="choiceByList" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <maximum-size width="1000" height="-1"/>
+          </grid>
         </constraints>
-        <properties>
-          <model>
-            <item value="Threshold segmentation"/>
-            <item value="Deep learning segmentation"/>
-          </model>
-        </properties>
-      </component>
-      <component id="f37ed" class="javax.swing.JLabel">
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="5e224" class="javax.swing.JList" binding="imageList" custom-create="true">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="2" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="e2a14" class="javax.swing.JButton" binding="validateList">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Choose DAPI image(s)"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <grid id="1a492" binding="choiceByExtension" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <maximum-size width="1000" height="-1"/>
+          </grid>
         </constraints>
-        <properties>
-          <text value="Which method of detection do you want to use ?"/>
-        </properties>
-      </component>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="23db0" class="javax.swing.JLabel" binding="endingLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Image ending without extension"/>
+            </properties>
+          </component>
+          <component id="e2638" class="javax.swing.JTextField" binding="imageEnding">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value=""/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <grid id="6ff26" binding="segmentationMethod" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <maximum-size width="1000" height="-1"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="f37ed" class="javax.swing.JLabel" binding="segmentationMethodsLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Which method of segmentation do you want to use ?"/>
+            </properties>
+          </component>
+          <component id="b091" class="javax.swing.JRadioButton" binding="deepLearningRadioButton" default-binding="true">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Deep learning"/>
+            </properties>
+          </component>
+          <component id="6c237" class="javax.swing.JRadioButton" binding="thresholdRadioButton" default-binding="true">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Threshold"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
     </children>
   </grid>
+  <buttonGroups>
+    <group name="segmentation">
+      <member id="b091"/>
+      <member id="6c237"/>
+    </group>
+  </buttonGroups>
 </form>
