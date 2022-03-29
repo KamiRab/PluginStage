@@ -6,12 +6,14 @@ import ij.process.AutoThresholder;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
+import java.awt.event.ActionListener;
 
-public class Detect_Nuclei {
+public class NucleiPanel extends JPanel {
     private JCheckBox isAZStackCheckBox;
     private JComboBox<String> zProjMethods;
     private JLabel zProjMethodsLabel;
@@ -21,22 +23,22 @@ public class Detect_Nuclei {
     private JLabel threshMethods_label;
     private JPanel zProj;
     private JCheckBox useWatershedCheckBox;
-    private JButton previewButton;
     private JPanel main;
     private JPanel parameters;
-    private JList<String> imageList;
+    private JList<ImagePlusDisplay> imageList;
     private JButton validateList;
     private JPanel choiceByList;
     private JPanel choiceByExtension;
     private JTextField imageEnding;
     private JLabel segmentationMethodsLabel;
     private JLabel endingLabel;
-    private JRadioButton deepLearningRadioButton;
-    private JPanel segmentationMethod;
-    private final ImagePlus[] imagesNames;
-    private final DefaultListModel<String> model = new DefaultListModel<>();
-    private ImagePlus[] selectedDAPI;
     private JRadioButton thresholdRadioButton;
+    private JRadioButton deepLearningRadioButton;
+    private JButton previewButton;
+    private JScrollPane imageListScrolling;
+    private final ImagePlusDisplay[] imagesNames;
+    private final DefaultListModel<ImagePlusDisplay> model = new DefaultListModel<>();
+    private ImagePlusDisplay[] selectedDAPI;
 
     //update combo avec extension ==> enlever bouton
 //    mettre extension par defaut et selectionner toutes les images par defaut si rien de selectionné
@@ -45,11 +47,18 @@ public class Detect_Nuclei {
 //     preview : que premiere image et en bouton
 //    get Last substring index
     //TODO preference
-    public Detect_Nuclei(ImagePlus[] ip_list) {
+    public NucleiPanel(ImagePlusDisplay[] ip_list) {
         $$$setupUI$$$();
         imagesNames = ip_list;
-        /*Are the images stacks ?*/
+        //        List of images
+        if (imagesNames != null) {
+            model.removeElement("Nothing to display");
+            for (ImagePlusDisplay ip : imagesNames) {
+                model.addElement(ip); /*TODO images avec meme nom ?*/
+            }
+        }
 
+        /*Are the images stacks ?*/
         isAZStackCheckBox.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 zProjMethods.setVisible(true);
@@ -62,8 +71,12 @@ public class Detect_Nuclei {
         previewButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new nucleiDetector(imagesNames[0], isAZStackCheckBox.isSelected(), zProjMethods.getItemAt(zProjMethods.getSelectedIndex()), deepLearningRadioButton.isSelected(), threshMethods.getItemAt(threshMethods.getSelectedIndex()), (Double) minSizeNucleus.getValue(), useWatershedCheckBox.isSelected());
+                if (imagesNames != null) {
+                    new NucleiDetector(imagesNames[0], isAZStackCheckBox.isSelected(), zProjMethods.getItemAt(zProjMethods.getSelectedIndex()), deepLearningRadioButton.isSelected(), threshMethods.getItemAt(threshMethods.getSelectedIndex()), (Double) minSizeNucleus.getValue(), useWatershedCheckBox.isSelected()).run();
 //                lance test pour premiere image de la liste
+                } else {
+                    IJ.error("There is no image to be used to do a preview.");
+                }
             }
         });
     }
@@ -86,11 +99,11 @@ public class Detect_Nuclei {
     private void $$$setupUI$$$() {
         createUIComponents();
         main = new JPanel();
-        main.setLayout(new GridLayoutManager(5, 1, new Insets(0, 0, 0, 0), -1, -1));
+        main.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
         main.setBorder(BorderFactory.createTitledBorder(null, "Detect nuclei", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         zProj = new JPanel();
         zProj.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(zProj, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(1000, -1), 0, false));
+        main.add(zProj, new GridConstraints(3, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(487, 48), null, 0, false));
         isAZStackCheckBox = new JCheckBox();
         isAZStackCheckBox.setText("Is a Z-stack ?");
         zProj.add(isAZStackCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -107,7 +120,7 @@ public class Detect_Nuclei {
         zProj.add(zProjMethods, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         parameters = new JPanel();
         parameters.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(parameters, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(1000, -1), 0, false));
+        main.add(parameters, new GridConstraints(4, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         threshMethods_label = new JLabel();
         threshMethods_label.setText("Threshold method");
         parameters.add(threshMethods_label, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -115,45 +128,43 @@ public class Detect_Nuclei {
         minSizeNucleus_label.setText("Minimum size of nucleus");
         parameters.add(minSizeNucleus_label, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         parameters.add(minSizeNucleus, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        previewButton = new JButton();
-        previewButton.setText("Preview");
-        parameters.add(previewButton, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useWatershedCheckBox = new JCheckBox();
         useWatershedCheckBox.setText("Use watershed");
         parameters.add(useWatershedCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         parameters.add(threshMethods, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        previewButton = new JButton();
+        previewButton.setText("Preview");
+        parameters.add(previewButton, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        segmentationMethodsLabel = new JLabel();
+        segmentationMethodsLabel.setText("Which method of segmentation do you want to use ?");
+        main.add(segmentationMethodsLabel, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         choiceByList = new JPanel();
-        choiceByList.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(choiceByList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(1000, -1), 0, false));
-        choiceByList.add(imageList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        choiceByList.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        main.add(choiceByList, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         validateList = new JButton();
         validateList.setText("Choose DAPI image(s)");
-        choiceByList.add(validateList, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        choiceByList.add(validateList, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        imageListScrolling = new JScrollPane();
+        choiceByList.add(imageListScrolling, new GridConstraints(0, 0, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        imageListScrolling.setViewportView(imageList);
         choiceByExtension = new JPanel();
         choiceByExtension.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(choiceByExtension, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(1000, -1), 0, false));
+        main.add(choiceByExtension, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         endingLabel = new JLabel();
         endingLabel.setText("Image ending without extension");
         choiceByExtension.add(endingLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        imageEnding = new JTextField();
         imageEnding.setText("");
-        choiceByExtension.add(imageEnding, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        segmentationMethod = new JPanel();
-        segmentationMethod.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(segmentationMethod, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(1000, -1), 0, false));
-        segmentationMethodsLabel = new JLabel();
-        segmentationMethodsLabel.setText("Which method of segmentation do you want to use ?");
-        segmentationMethod.add(segmentationMethodsLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        deepLearningRadioButton = new JRadioButton();
-        deepLearningRadioButton.setText("Deep learning");
-        segmentationMethod.add(deepLearningRadioButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        choiceByExtension.add(imageEnding, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         thresholdRadioButton = new JRadioButton();
         thresholdRadioButton.setText("Threshold");
-        segmentationMethod.add(thresholdRadioButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        main.add(thresholdRadioButton, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        deepLearningRadioButton = new JRadioButton();
+        deepLearningRadioButton.setText("Deep learning");
+        main.add(deepLearningRadioButton, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ButtonGroup buttonGroup;
         buttonGroup = new ButtonGroup();
-        buttonGroup.add(deepLearningRadioButton);
         buttonGroup.add(thresholdRadioButton);
+        buttonGroup.add(deepLearningRadioButton);
     }
 
     /**
@@ -164,33 +175,57 @@ public class Detect_Nuclei {
     }
 
     private void createUIComponents() {
-
-//        List of images
-        if (imagesNames == null) {
-            model.addElement("Nothing to display");
-        } else {
-            for (ImagePlus ip : imagesNames) {
-                model.addElement(ip.getTitle()); /*TODO images avec meme nom ?*/
-            }
-        }
+        model.addElement(null);
         imageList = new JList<>(model);
+
 
 // List of methods for threshold
         threshMethods = new JComboBox<>(AutoThresholder.getMethods());
 
 // minSize spinner
-        minSizeNucleus = new JSpinner(new SpinnerNumberModel(1000.0, 0, Double.MAX_VALUE, 10));
+        minSizeNucleus = new JSpinner(new SpinnerNumberModel(1000.0, 0.0, null, 100.0));
+
+//  Textfield to filter extension
+        imageEnding = createTextfield();
     }
 
-    public static void main(String[] args) {
-        JFrame test = new JFrame("Espoir");
-        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-        test.setContentPane(new Detect_Nuclei(imagesToAnalyze).getMain());
-        test.pack();
-        test.setVisible(true);
+    public void filterModel(DefaultListModel<ImagePlusDisplay> model, String filter) {
+        for (ImagePlusDisplay image : imagesNames) {
+            String title = image.getImagePlus().getTitle();
+            if (!title.endsWith(filter) || !title.endsWith(filter.split("\\.")[0])) {
+                if (model.contains(image)) {
+                    model.removeElement(image);
+                }
+            } else {
+                if (!model.contains(image)) {
+                    model.addElement(image);
+                }
+            }
+        }
+    }
 
+    private JTextField createTextfield() { /*https://stackoverflow.com/a/26272327*/
+        final JTextField field = new JTextField(15);
+        field.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filter();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filter();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+            }
+
+            private void filter() {
+                String filter = field.getText();
+                filterModel((DefaultListModel<ImagePlusDisplay>) imageList.getModel(), filter);
+            }
+        });
+        return field;
     }
 }

@@ -1,4 +1,3 @@
-import ij.IJ;
 import ij.ImagePlus;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
@@ -9,13 +8,10 @@ import ij.plugin.filter.ParticleAnalyzer;
 import ij.plugin.frame.RoiManager;
 import ij.process.ImageProcessor;
 
-import java.util.Objects;
-
 import static ij.plugin.frame.RoiManager.getInstance;
 import static ij.process.AutoThresholder.Method.Default;
-import static ij.process.AutoThresholder.Method.Li;
 
-public class nucleiDetector {
+public class NucleiDetector {
     private ImagePlus image;
     private boolean zStack;
     private String zStackProj;
@@ -23,9 +19,10 @@ public class nucleiDetector {
     private String thrMethod;
     private double minSizeNucleus;
     private boolean useWatershed;
+    private boolean preview;
 
-    public nucleiDetector(ImagePlus image, boolean zStack, String zStackProj, boolean deeplearning, String thrMethod, double minSizeNucleus, boolean useWatershed) {
-        this.image = image;
+    public NucleiDetector(ImagePlusDisplay image, boolean zStack, String zStackProj, boolean deeplearning, String thrMethod, double minSizeNucleus, boolean useWatershed) {
+        this.image = image.getImagePlus();
         this.zStack = zStack;
         this.zStackProj = zStackProj;
         this.deeplearning = deeplearning;
@@ -40,8 +37,8 @@ public class nucleiDetector {
 
         // PROJECTION
         ImagePlus threshold_IP;
+        ImagePlus projection_IP;
         if (zStack){
-            ImagePlus projection_IP;
             if (zStackProj.equals("Maximum projection")){
                 projection_IP = ZProjector.run(image, "max"); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
             } else {
@@ -50,6 +47,7 @@ public class nucleiDetector {
             projection_IP.show(); /*image projetée*/
             threshold_IP = new Duplicator().run(projection_IP); /*Duplique image au cas où*/ /*==duplicate()*/
         } else {
+            projection_IP=image;
             threshold_IP= image;
         }
 
@@ -68,7 +66,7 @@ public class nucleiDetector {
             roiManager_nuclei.reset();
         }
         ParticleAnalyzer.setRoiManager(roiManager_nuclei); /*precise ROImanager à utiliser*/
-        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(ParticleAnalyzer.SHOW_OVERLAY_MASKS + ParticleAnalyzer.ADD_TO_MANAGER + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES, 0, resultsNuclei, minSizeNucleus, 999999);
+        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(ParticleAnalyzer.SHOW_OVERLAY_MASKS + ParticleAnalyzer.ADD_TO_MANAGER + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES, 0, resultsNuclei, 1000, 999999);
         /*précise param a utiliser : actuellement créé overlay, ajouter ROI au ROIm, ne compte pas les particules partielles, ne mesure rien (je crois ?), taille minimale de particule = 1000*/
 
         threshold_proc.setAutoThreshold(Default, true); /*besoin de recreer threshold, vu que image est devenu binaire */
@@ -77,12 +75,12 @@ public class nucleiDetector {
         resultsNuclei.reset();/*vide tableau*/
 
         int number_nuclei = roiManager_nuclei.getCount(); /*recupere nombre de particules*/
-        Analyzer analyzer = new Analyzer(image, Measurements.MEAN + Measurements.AREA, resultsNuclei); /*precise mesures à faire et image sur laquelle faire*/
-        //Iteration sur ROI manager pour mesure
-        for (int i = 0; i < number_nuclei; i++) {
-            roiManager_nuclei.select(image, i);
-            analyzer.measure();
-        }
-        resultsNuclei.show("Results nuclei");
+            Analyzer analyzer = new Analyzer(projection_IP, Measurements.MEAN + Measurements.AREA, resultsNuclei); /*precise mesures à faire et image sur laquelle faire*/
+            //Iteration sur ROI manager pour mesure
+            for (int i = 0; i < number_nuclei; i++) {
+                roiManager_nuclei.select(projection_IP, i);
+                analyzer.measure();
+            }
+            resultsNuclei.show("Results nuclei");
     }
 }

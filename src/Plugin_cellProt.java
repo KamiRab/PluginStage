@@ -18,12 +18,7 @@ import ij.process.ImageProcessor;
 import ij.util.ArrayUtil;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -38,7 +33,7 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
     private JLabel Plugin_title;
     private JButton okButton;
     private JButton cancelButton;
-    private JComboBox calibrationValues;
+    private JComboBox<String> calibrationValues;
     private JPanel main;
     private JPanel general;
     private JTabbedPane tabs;
@@ -49,58 +44,43 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
     private JSpinner nrProteins;
     private JButton validateMainConfigurationButton;
     private JLabel nrProteinsLabel;
-    Detect_Nuclei detect_nuclei;
-    Detect_Nuclei detect_cytoplasm; /*TODO replace with detectCytoplasm class or similar*/
+    NucleiPanel detect_nuclei;
+    NucleiPanel detect_cytoplasm; /*TODO replace with detectCytoplasm class or similar*/
     ProteinQuantificationPanel[] quantify_proteins;
-    ImagePlus[] ip_list;
+    ImagePlusDisplay[] ip_list;
 
-    public Plugin_cellProt(ImagePlus[] imagesToAnalyse, boolean fromDirectory) {
+    public Plugin_cellProt(ImagePlusDisplay[] imagesToAnalyse, boolean fromDirectory) {
         $$$setupUI$$$();
-        for (ImagePlus image : imagesToAnalyse) {
-            IJ.log(image.getTitle());
+        for (ImagePlusDisplay image : imagesToAnalyse) {
+            IJ.log(image.getImagePlus().getTitle());
         }
         ip_list = imagesToAnalyse;
         /*TODO add tab with spinner*/
-        okButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                launch_Plugin();
+        okButton.addActionListener(e -> launch_Plugin());
+        validateMainConfigurationButton.addActionListener(e -> {
+            if (nucleiCheckBox.isSelected()) {
+                detect_nuclei = new NucleiPanel(ip_list);
+                tabs.addTab("Detection of nuclei", detect_nuclei.getMain());
             }
-        });
-        validateMainConfigurationButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (nucleiCheckBox.isSelected()) {
-                    detect_nuclei = new Detect_Nuclei(ip_list);
-                    tabs.addTab("Detection of nuclei", detect_nuclei.getMain());
-                }
-                if (cytoplasmCheckBox.isSelected()) {
-                    detect_cytoplasm = new Detect_Nuclei(ip_list);
-                    tabs.addTab("Detect cytoplasm", detect_cytoplasm.getMain());
-                }
-                Integer nrProteinTabs = (Integer) nrProteins.getValue();
-                quantify_proteins = new ProteinQuantificationPanel[nrProteinTabs];
-                for (int i = 0; i < nrProteinTabs; i++) {
-                    quantify_proteins[i] = new ProteinQuantificationPanel(ip_list);
-                    tabs.addTab("Protein " + (i + 1) + " quantification", quantify_proteins[i].getMain());
-                }
-                pack();
+            if (cytoplasmCheckBox.isSelected()) {
+                detect_cytoplasm = new NucleiPanel(ip_list);
+                tabs.addTab("Detect cytoplasm", detect_cytoplasm.getMain());
             }
-        });
-        cancelButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
+            Integer nrProteinTabs = (Integer) nrProteins.getValue();
+            quantify_proteins = new ProteinQuantificationPanel[nrProteinTabs];
+            for (int i = 0; i < nrProteinTabs; i++) {
+//                    quantify_proteins[i] = new ProteinQuantificationPanel(ip_list);
+                quantify_proteins[i] = new ProteinQuantificationPanel(ip_list);
+                tabs.addTab("Protein " + (i + 1) + " quantification", quantify_proteins[i].getMain());
             }
+
         });
+        cancelButton.addActionListener(e -> dispose());
     }
 
     public void run(String s) {
         setTitle("Plugin2Name");
         setContentPane(this.main);
-        main.setMaximumSize(new Dimension(800, 280));
-        setPreferredSize(new Dimension(1000, 300));
-//        setSize(1200, 200);
 //        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         pack();
         setVisible(true);
@@ -160,7 +140,7 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
 
         /*Find maxima*/
         MaximumFinder maximumFinder = new MaximumFinder();
-        ResultsTable resultsTable_foci = new ResultsTable();
+//        ResultsTable resultsTable_foci = new ResultsTable();
         Variable[] cell_name = new Variable[number_nuclei];
         Variable[] fociMean = new Variable[number_nuclei];
         Variable[] fociMin = new Variable[number_nuclei];
@@ -173,9 +153,9 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
             roiManager_nuclei.select(wobkg_IP, i);
             ImageProcessor wobkg_proc = wobkg_IP.getProcessor();
             Polygon maxima = maximumFinder.getMaxima(wobkg_proc, 1000, true);
-            int nb_maxima = maxima.npoints;
+//            int nb_maxima = maxima.npoints;
             PointRoi roi_maxima = new PointRoi(maxima);
-            Point[] foci = roi_maxima.getContainedPoints();
+//            Point[] foci = roi_maxima.getContainedPoints();
             ArrayList<Float> pixelValue = new ArrayList<>();
             for (Point p : roi_maxima) {
                 pixelValue.add(wobkg_proc.getPixelValue(p.x, p.y));
@@ -184,14 +164,13 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
             ArrayUtil roiArray;
             if (pixelValue.size() == 0) {
                 roiValue = new float[]{0, 0};
-                roiArray = new ArrayUtil(roiValue);
             } else {
                 roiValue = new float[pixelValue.size()];
                 for (int index = 0; index < pixelValue.size(); index++) {
                     roiValue[index] = pixelValue.get(index);
                 }
-                roiArray = new ArrayUtil(roiValue);
             }
+            roiArray = new ArrayUtil(roiValue);
             fociNr[i] = new Variable(pixelValue.size());
             fociMean[i] = new Variable(roiArray.getMean());
             fociMax[i] = new Variable(roiArray.getMaximum());
@@ -227,11 +206,6 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
         rt.show("Foci");
         rt.save("essai.txt");
 
-    }
-
-    public ResultsTable setFinalResults() {
-        ResultsTable final_rt = new ResultsTable();
-        return final_rt;
     }
 
     private void createUIComponents() {
@@ -270,7 +244,7 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
         main.add(calibrationValues, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         tabs = new JTabbedPane();
         tabs.setTabPlacement(1);
-        main.add(tabs, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 422), new Dimension(800, 500), 0, false));
+        main.add(tabs, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 422), null, 0, false));
         general = new JPanel();
         general.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
         tabs.addTab("General", general);
@@ -300,10 +274,10 @@ public class Plugin_cellProt extends JFrame implements PlugIn {
     }
 
     public static void main(String[] args) {
-        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+        ImagePlusDisplay[] imagesToAnalyze = new ImagePlusDisplay[3];
+        imagesToAnalyze[0] = new ImagePlusDisplay(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF"));
+        imagesToAnalyze[1] = new ImagePlusDisplay(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF"));
+        imagesToAnalyze[2] = new ImagePlusDisplay(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF"));
         Plugin_cellProt plugin = new Plugin_cellProt(imagesToAnalyze, false);
         plugin.run(null);
     }

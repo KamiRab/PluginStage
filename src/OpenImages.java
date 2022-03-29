@@ -7,8 +7,6 @@ import ij.plugin.PlugIn;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileFilter;
@@ -21,7 +19,7 @@ public class OpenImages extends JFrame implements PlugIn {
     private JPanel directoryImages;
     private JRadioButton noRadioButton;
     private JRadioButton yesRadioButton;
-    private JList<String> windowList;
+    private JList<ImagePlusDisplay> windowList;
     private JButton OKButton;
     private JPanel main;
     private JButton cancelButton;
@@ -38,8 +36,8 @@ public class OpenImages extends JFrame implements PlugIn {
     private JLabel extensionLabel;
     boolean useDirectory = false;
     File directory;
-    ImagePlus[] IP_list;
-    DefaultListModel<String> model = new DefaultListModel<>();
+    ImagePlusDisplay[] IP_list;
+    DefaultListModel<ImagePlusDisplay> model = new DefaultListModel<>();
 
     public OpenImages() {
         $$$setupUI$$$();
@@ -63,9 +61,11 @@ public class OpenImages extends JFrame implements PlugIn {
                 if (windowList.getModel().getSize() == 0) {
                     IJ.error("There are no images to analyse");
                 } else {
-                    for (int i = 0; i < windowList.getModel().getSize(); i++) {
-                        IJ.log(windowList.getModel().getElementAt(i).split("#")[0]);
+                    IP_list = new ImagePlusDisplay[model.getSize()];
+                    for (int i = 0; i < model.getSize(); i++) {
+                        IP_list[i] = model.getElementAt(i);
                     }
+
                     IJ.log("There are " + IP_list.length + " images");
                     Plugin_cellProt analysis = new Plugin_cellProt(IP_list, useDirectory);
                     analysis.run(null);
@@ -104,19 +104,12 @@ public class OpenImages extends JFrame implements PlugIn {
             pack();
         });
         cancelButton.addActionListener(e -> this.dispose()); /*TODO fonctionne pas*/
-        selectImageButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedImageIndex = getImageIDFromJListElement(windowList.getSelectedValue());
-                selectWindow(selectedImageIndex);
-            }
+        selectImageButton.addActionListener(e -> {
+//                int selectedImageIndex = getImageIDFromJListElement(windowList.getSelectedValue());
+            int selectedImageIndex = windowList.getSelectedValue().getID();
+            selectWindow(selectedImageIndex);
         });
-        removeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.removeElementAt(windowList.getSelectedIndex());
-            }
-        });
+        removeButton.addActionListener(e -> model.removeElementAt(windowList.getSelectedIndex()));
     }
 
     @Override
@@ -143,10 +136,10 @@ public class OpenImages extends JFrame implements PlugIn {
             if (images.length == 0) {
                 IJ.error("No file corresponding to the extension chosen has been found");
             } else {
-                IP_list = new ImagePlus[images.length];
+                IP_list = new ImagePlusDisplay[images.length];
                 for (int i = 0; i < images.length; i++) {
-                    IP_list[i] = new ImagePlus(images[i].getAbsolutePath());
-                    IJ.log(IP_list[i].getTitle() + ":" + images[i].getName());
+                    IP_list[i] = new ImagePlusDisplay(new ImagePlus(images[i].getAbsolutePath()));
+                    IJ.log(IP_list[i].getImagePlus().getTitle() + ":" + images[i].getName());
                     choosenDirectoryFiles.append(images[i].getName() + "\n");
                 }
 
@@ -154,14 +147,14 @@ public class OpenImages extends JFrame implements PlugIn {
         }
     }
 
-    public static ImagePlus getImagePlusFromJListElement(String listElement) {
-        return WindowManager.getImage(getImageIDFromJListElement(listElement));
-    }
-
-    public static int getImageIDFromJListElement(String listElement) {
-        String id = listElement.split("#")[1];
-        return Integer.parseInt(id);
-    }
+//    public static ImagePlus getImagePlusFromJListElement(String listElement) {
+//        return WindowManager.getImage(getImageIDFromJListElement(listElement));
+//    }
+//
+//    public static int getImageIDFromJListElement(String listElement) {
+//        String id = listElement.split("#")[1];
+//        return Integer.parseInt(id);
+//    }
 
     public void processWindowEvent(WindowEvent e) {
         if (e.getID() == WindowEvent.WINDOW_CLOSING) {
@@ -173,11 +166,11 @@ public class OpenImages extends JFrame implements PlugIn {
     private void createUIComponents() {
         if (WindowManager.getImageCount() > 0)
             for (int id_Image : WindowManager.getIDList()) {
-                String image_title = WindowManager.getImage(id_Image).getTitle();
-                model.addElement(image_title + "#" + id_Image);
+                ImagePlusDisplay image = new ImagePlusDisplay(WindowManager.getImage(id_Image));
+                model.addElement(image);
                 /*TODO mettre ID + title puis parseint*/
             }
-        windowList = new JList<String>(model);
+        windowList = new JList<>(model);
         windowList.setSelectedIndex(0);
 
         preText = new JLabel();
@@ -194,7 +187,14 @@ public class OpenImages extends JFrame implements PlugIn {
     }
 
     public static void main(String[] args) {
-
+//        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
+//        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+//        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
+//        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+//        for (ImagePlus images : imagesToAnalyze
+//        ) {
+//            images.show();
+//        }
         OpenImages openImages = new OpenImages();
         openImages.run(null);
     }
@@ -281,7 +281,4 @@ public class OpenImages extends JFrame implements PlugIn {
         return main;
     }
 
-    public class toto {
-
-    }
 }
