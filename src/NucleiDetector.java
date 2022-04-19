@@ -1,86 +1,267 @@
+import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
-import ij.plugin.Duplicator;
-import ij.plugin.ZProjector;
 import ij.plugin.filter.Analyzer;
-import ij.plugin.filter.ParticleAnalyzer;
+import ij.plugin.filter.EDM;
+import ij.plugin.filter.RankFilters;
 import ij.plugin.frame.RoiManager;
 import ij.process.ImageProcessor;
 
-import static ij.plugin.frame.RoiManager.getInstance;
-import static ij.process.AutoThresholder.Method.Default;
-
 public class NucleiDetector {
-    private ImagePlus image;
-    private boolean zStack;
-    private String zStackProj;
+    private final ImagePlus image;
+    private ImagePlus imageToMeasure;
+    private ImagePlus imageToAnalyze;
+    private final String name_experiment;
+//    private final Calibration calibration;
+    private boolean zStack =false;
+    private final String directory;
+
     private boolean deeplearning;
-    private String thrMethod;
+
+    private String thresholdMethod;
     private double minSizeNucleus;
     private boolean useWatershed;
-    private boolean preview;
+    private boolean excludeOnEdges;
 
-    public NucleiDetector(ImagePlusDisplay image, boolean zStack, String zStackProj, boolean deeplearning, String thrMethod, double minSizeNucleus, boolean useWatershed) {
-        this.image = image.getImagePlus();
-        this.zStack = zStack;
-        this.zStackProj = zStackProj;
-        this.deeplearning = deeplearning;
-        this.thrMethod = thrMethod;
-        this.minSizeNucleus = minSizeNucleus;
-        this.useWatershed = useWatershed;
+//    private final boolean preview;
+    private Roi[] nucleiRois;
+    private Analyzer analyzer;
+    private RoiManager roiManagerNuclei;
+//    private ResultsTable resultsTableNuclei;
+    private ResultsTable rawMesures;
+    private boolean finalValidation;
+    private final Detector detector;
+    private boolean useMacro;
+    private String macroText;
+//    private final String [] measurements = new String[]{"Area", "Mean","RawIntDen"};
+
+    /**
+     *
+     * @param image image to analyze
+     * @param name_experiment name without channel
+     * @param zStack is the image a z-stack ?
+     * @param zStackProj if z-stack, method of projection to use
+     * @param zStackFirstSlice if z-stack : first slice to use
+     * @param zStackLastSlice if z-stack : last slice to use
+     * @param deeplearning if true : use deep learning, else threshold
+     * @param thresholdMethod if threshold : method to use
+     * @param minSizeNucleus if threshold
+     * @param useWatershed if threshold
+     * @param excludeOnEdges if threshold
+     * @param finalValidation TODO
+     */
+    public NucleiDetector(ImagePlus image, String name_experiment, boolean zStack, String zStackProj,int zStackFirstSlice,int zStackLastSlice, boolean deeplearning, String thresholdMethod, double minSizeNucleus, boolean useWatershed, boolean excludeOnEdges, /*boolean preview,*/ Calibration calibration,boolean finalValidation, String directory) {
+        this(image,name_experiment/*,preview*/,calibration, directory);
+        if (zStack){
+            setzStackParameters(zStackProj,zStackFirstSlice,zStackLastSlice);
+        }
+        if(deeplearning){
+            this.deeplearning = true;
+        } else {
+            setThresholdMethod(thresholdMethod,minSizeNucleus,useWatershed,excludeOnEdges,finalValidation);
+        }
     }
 
+
+    /**
+     *
+     * @param image TODO
+     * @param name_experiment TODO
+     */
+    public NucleiDetector(ImagePlus image, String name_experiment, /*boolean preview,*/ Calibration calibration, String fromDir) {
+        this.image = image;
+        this.directory =fromDir;
+        if (name_experiment.endsWith("_")){
+            this.name_experiment = name_experiment.substring(0,name_experiment.length()-1);
+        }else {
+            this.name_experiment=name_experiment;
+        }
+        detector = new Detector(image,name_experiment, "Nucleus",calibration);
+    }
+
+    /**
+     *
+     * @param zStackProj TODO
+     * @param zStackFirstSlice TODO
+     * @param zStackLastSlice TODO
+     */
+    public void setzStackParameters(String zStackProj, int zStackFirstSlice,int zStackLastSlice){
+        detector.setzStackParameters(zStackProj,zStackFirstSlice,zStackLastSlice);
+        this.zStack=true;
+    }
+
+    public void setPreprocessingMacro(String macroText){
+        this.useMacro = true;
+        this.macroText = macroText;
+    }
+
+
+    /**
+     *
+     * @param zStackProj TODO
+     */
+    public void setzStackParameters(String zStackProj) {
+        setzStackParameters(zStackProj, 1, image.getNSlices());
+    }
+
+    /**
+     *
+     * @param thrMethod TODO
+     * @param minSizeNucleus TODO
+     * @param useWatershed TODO
+     * @param excludeOnEdges TODO
+     */
+    public void setThresholdMethod(String thrMethod,double minSizeNucleus,boolean useWatershed,boolean excludeOnEdges,boolean finalValidation) {
+        this.deeplearning = false;
+        this.thresholdMethod = thrMethod + " dark";
+        this.useWatershed = useWatershed;
+        this.minSizeNucleus = minSizeNucleus;
+        this.excludeOnEdges = excludeOnEdges;
+        this.finalValidation = finalValidation;
+    }
+
+    /**
+     *
+     * @return TODO
+     */
+    public Roi[] getRoiArray() {
+        return nucleiRois;
+    }
+
+    public ImagePlus getImage() {
+        return image;
+    }
+
+    public void preview(){
+        preprocessing_threshold();
+    }
+
+    public void prepare(){
+        if (deeplearning){
+            IJ.error("Sorry not done yet");
+        } else {
+            preprocessing_threshold();
+            // Analyse particule
+//            this.resultsTableNuclei = new ResultsTable(); /*creation d'une resultTable pour PA*/
+            this.rawMesures = new ResultsTable();
+            roiManagerNuclei=detector.analyzeParticles(imageToAnalyze,excludeOnEdges,minSizeNucleus);
+            if (finalValidation){
+                roiManagerNuclei.runCommand("Show All");
+                new WaitForUserDialog("Nuclei selection", "Delete nuclei : select the ROIs + delete").show();
+            }
+            nucleiRois =roiManagerNuclei.getRoisAsArray();
+            analyzer = new Analyzer(imageToMeasure, Measurements.MEAN + Measurements.AREA+Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
+        }
+    }
+    /**
+     *
+     */
     public void run(){
-        //        OPEN DAPI IMAGE
-        image.show();
+        if (deeplearning){
+            IJ.error("Sorry not done yet");
+        } else {
+            preprocessing_threshold();
+            // Analyse particule
+//            this.resultsTableNuclei = new ResultsTable(); /*creation d'une resultTable pour PA*/
+            this.rawMesures = new ResultsTable();
+            roiManagerNuclei=detector.analyzeParticles(imageToAnalyze,excludeOnEdges,minSizeNucleus);
+            if (finalValidation){
+                roiManagerNuclei.runCommand("Show All");
+                new WaitForUserDialog("Nuclei selection", "Delete nuclei : select the ROIs + delete").show();
+            }
+            nucleiRois =roiManagerNuclei.getRoisAsArray();
+            analyzer = new Analyzer(imageToMeasure, Measurements.MEAN + Measurements.AREA+Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
+        }
+        ResultsTable test = new ResultsTable();
+        for (int nucleus = 0; nucleus < nucleiRois.length; nucleus++) {
+            test.addValue("Name experiment", name_experiment);
+            test.addValue("Cell name", "Cell name nr. "+ (nucleus+1));
+            measureEachNuclei(nucleus, test);
+            test.incrementCounter();
+        }
+    }
 
-        // PROJECTION
-        ImagePlus threshold_IP;
-        ImagePlus projection_IP;
-        if (zStack){
-            if (zStackProj.equals("Maximum projection")){
-                projection_IP = ZProjector.run(image, "max"); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
+    public void measureEachNuclei(int nucleus,ResultsTable resultsTableFinal) {
+        imageToMeasure.setRoi(nucleiRois[nucleus]);
+        analyzer.measure();
+        detector.setResultsNucleus(rawMesures,resultsTableFinal,nucleus);
+    }
+
+
+//    TODO mesureNuclei par ROI ==> besoin de globaliser analyser et results table
+//    TODO Mesure noyau et prot dans meme boucle de Roi
+//    TODO Save RT final a chaque fin d'exp, meme si veut tous les exp dans save
+//    TODO preprocess puis boucle ROI
+//    TODO remplit RT final ligne par ligne (copie toutes les colonnes une à une)
+
+
+    /**
+     *
+     * @param binary_threshold_proc : processor of mask, already ByteProcessor
+     * @return TODO
+     */
+    private ImagePlus getWatershed(ImageProcessor binary_threshold_proc) {
+//        ByteProcessor binary_threshold_proc = threshold_proc.convertToByteProcessor();
+        EDM edm = new EDM();
+        edm.toWatershed(binary_threshold_proc);
+        return new ImagePlus(image.getTitle()+"_watershed",binary_threshold_proc);
+    }
+
+    public void preprocessing_threshold(){
+
+        IJ.run("Options...","iterations=1 count=1 black");
+//        PROJECTION : convert stack to one image
+        this.imageToMeasure = (zStack) ? detector.getImage() : image.duplicate();
+        if (directory==null){
+            this.imageToMeasure.show(); /*show image that will be measured*/
+        }
+        if (useMacro){
+            IJ.selectWindow(imageToMeasure.getID());
+            IJ.runMacro(macroText);
+            imageToMeasure.show();
+        }
+//         MEDIAN FILTER : reduce noise
+        ImagePlus filteredProjection = imageToMeasure.duplicate();
+        new RankFilters().rank(filteredProjection.getProcessor(),5,RankFilters.MEDIAN);
+
+//        OBTAIN BINARY MASK OF THRESHOLDED IMAGE
+        ImagePlus mask_IP = detector.getThresholdMask(filteredProjection,thresholdMethod,minSizeNucleus);
+        if (directory==null){
+            mask_IP.show();
+        } else {
+            IJ.save(mask_IP,directory+"\\Results\\"+mask_IP.getTitle());
+        }
+        mask_IP.getProcessor().invertLut();
+        IJ.run(mask_IP, "Fill Holes","");
+        if (useWatershed){
+            ImagePlus watersheded_mask = getWatershed(mask_IP.getProcessor());
+            if (directory==null){
+                watersheded_mask.show();
             } else {
-                projection_IP = ZProjector.run(image, "sd"); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
+                IJ.save(directory+"Results/"+watersheded_mask.getTitle());
             }
-            projection_IP.show(); /*image projetée*/
-            threshold_IP = new Duplicator().run(projection_IP); /*Duplique image au cas où*/ /*==duplicate()*/
-        } else {
-            projection_IP=image;
-            threshold_IP= image;
+            imageToAnalyze = watersheded_mask;
+        }else {
+            imageToAnalyze = mask_IP.duplicate();
         }
+    }
 
-        // SEUILLAGE
-        ImageProcessor threshold_proc = threshold_IP.getProcessor(); /*recupere processor alias image*/
-        threshold_proc.setAutoThreshold(thrMethod);/*definit methode et bkg foncé (par defaut dark)*/
-        threshold_proc.autoThreshold(); /*crée masque binaire avec thr*/
-        threshold_IP.show(); /*Montre image binaire : correspond a la creation d'un masque*/
+    /**
+     *
+     * @return TODO
+     */
+    public String getName_experiment() {
+        return name_experiment;
+    }
 
-        // Analyse particule
-        ResultsTable resultsNuclei = new ResultsTable(); /*creation d'une resultTable pour PA*/
-        RoiManager roiManager_nuclei = getInstance(); /*recupere ROImanager actuel*/
-        if (roiManager_nuclei == null) { /*si aucun ROiM trouvé, en crée un*/
-            roiManager_nuclei = new RoiManager();/*creation si besoin est, d'un ROI manager pour l'avoir en variable*/
-        } else {
-            roiManager_nuclei.reset();
-        }
-        ParticleAnalyzer.setRoiManager(roiManager_nuclei); /*precise ROImanager à utiliser*/
-        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(ParticleAnalyzer.SHOW_OVERLAY_MASKS + ParticleAnalyzer.ADD_TO_MANAGER + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES, 0, resultsNuclei, 1000, 999999);
-        /*précise param a utiliser : actuellement créé overlay, ajouter ROI au ROIm, ne compte pas les particules partielles, ne mesure rien (je crois ?), taille minimale de particule = 1000*/
-
-        threshold_proc.setAutoThreshold(Default, true); /*besoin de recreer threshold, vu que image est devenu binaire */
-        particleAnalyzer.analyze(threshold_IP); /*recupere particules dans ROI + mesures*/
-
-        resultsNuclei.reset();/*vide tableau*/
-
-        int number_nuclei = roiManager_nuclei.getCount(); /*recupere nombre de particules*/
-            Analyzer analyzer = new Analyzer(projection_IP, Measurements.MEAN + Measurements.AREA, resultsNuclei); /*precise mesures à faire et image sur laquelle faire*/
-            //Iteration sur ROI manager pour mesure
-            for (int i = 0; i < number_nuclei; i++) {
-                roiManager_nuclei.select(projection_IP, i);
-                analyzer.measure();
-            }
-            resultsNuclei.show("Results nuclei");
+    public static void main(String[] args) {
+        ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI,"WT_HU_Ac-2re--cell003",/*false,*/new Calibration("No calibration",0.5,"pix"),"C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/");
+        nucleiDetector.setzStackParameters("Maximum projection");
+        nucleiDetector.setThresholdMethod("Li",1000,false,true,false);
+        nucleiDetector.run();
     }
 }

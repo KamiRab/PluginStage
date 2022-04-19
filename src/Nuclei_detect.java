@@ -27,7 +27,7 @@ public class Nuclei_detect implements PlugIn {
     ImagePlus imp;
     static JFrame instance; /*only one copy of the plugin */
 //    public int setup(String s, ImagePlus imagePlus) {
-//        /*TODO Dialogue*/
+//
 //        this.imp = imagePlus;
 ////        return DOES_ALL;
 //        return DOES_ALL+STACK_REQUIRED;
