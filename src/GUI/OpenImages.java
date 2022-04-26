@@ -1,3 +1,6 @@
+package GUI;
+
+import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import ij.IJ;
@@ -7,6 +10,8 @@ import ij.plugin.PlugIn;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -25,7 +30,7 @@ public class OpenImages extends JFrame implements PlugIn {
     private JRadioButton useOpenImagesRadioButton;
     private JList<ImageToAnalyze> windowList;
     private JButton OKButton;
-    private JPanel main;
+    private JPanel mainPanel;
     private JButton cancelButton;
     private JComboBox<String> extension;
     private JButton chooseDirectoryButton;
@@ -33,10 +38,10 @@ public class OpenImages extends JFrame implements PlugIn {
     private JButton selectImageButton;
     private JButton removeButton;
     private JList<String> choosenDirectoryFiles;
-    private JLabel preText;
-    private JPanel radioButtonChoice;
+    private JLabel preTextChoiceImage;
+    private JPanel radioButtonChoicePanel;
     private JPanel originImages;
-    private JPanel validation;
+    private JPanel validationPanel;
     private JLabel extensionLabel;
     private JScrollPane imageListScroll;
     private JTextField otherExtensionField;
@@ -66,7 +71,12 @@ public class OpenImages extends JFrame implements PlugIn {
         otherExtensionField.setVisible(false);
         extension.setSelectedItem(Prefs.get("PluginToName.ChoiceExtension", ".TIF"));
         otherExtensionField.setText(Prefs.get("PluginToName.ChoiceExtension", ".TIF"));
-        cancelButton.addActionListener(e -> this.dispose()); /*TODO fonctionne pas*/
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+            }
+        });
         OKButton.addActionListener(e -> {
             if (useDirectory) {
                 if (directory == null) {
@@ -88,7 +98,7 @@ public class OpenImages extends JFrame implements PlugIn {
                             IJ.error("Failed to create results directory" + ex.getMessage());
                         }
                         IJ.log("There are " + IP_list.length + " images");
-                        Plugin_cellProt analysis = new Plugin_cellProt(IP_list, useDirectory);
+                        PluginCellProt analysis = new PluginCellProt(IP_list, useDirectory);
                         analysis.run(null);
                         this.setVisible(false);
                         Prefs.set("PluginToName.ChoiceExtension", extension.getItemAt(extension.getSelectedIndex()));
@@ -104,7 +114,7 @@ public class OpenImages extends JFrame implements PlugIn {
                         IP_list[i] = openImagesModel.getElementAt(i);
                     }
                     IJ.log("There are " + IP_list.length + " images");
-                    Plugin_cellProt analysis = new Plugin_cellProt(IP_list, useDirectory);
+                    PluginCellProt analysis = new PluginCellProt(IP_list, useDirectory);
                     analysis.run(null);
                     this.setVisible(false);
                 }
@@ -172,7 +182,7 @@ public class OpenImages extends JFrame implements PlugIn {
     public void run(String s) {
         createUIComponents();
         setTitle("Plugin2Name");
-        setContentPane(new OpenImages().main);
+        setContentPane(this.mainPanel);
         setPreferredSize(new Dimension(500, 300));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         pack();
@@ -195,7 +205,7 @@ public class OpenImages extends JFrame implements PlugIn {
                 IP_list = new ImageToAnalyze[images.length];
                 fileModel.removeAllElements();
                 for (int i = 0; i < images.length; i++) {
-//                    IP_list[i] = new ImageToAnalyze(new ImagePlus(images[i].getAbsolutePath()));
+//                    IP_list[i] = new Helpers.ImageToAnalyze(new ImagePlus(images[i].getAbsolutePath()));
                     IP_list[i] = new ImageToAnalyze(directory.getAbsolutePath(), images[i].getName());
 //                    IJ.log(IP_list[i].getImagePlus().getTitle() + ":" + images[i].getName());
                     fileModel.addElement(images[i].getName());
@@ -233,11 +243,11 @@ public class OpenImages extends JFrame implements PlugIn {
         choosenDirectoryFiles = new JList<>(fileModel);
         windowList.setSelectedIndex(0);
 
-        preText = new JLabel();
+        preTextChoiceImage = new JLabel();
         if (WindowManager.getImageCount() > 0) {
-            preText.setText("There are open images, do you want to use them ?");
+            preTextChoiceImage.setText("There are open images, do you want to use them ?");
         } else {
-            preText.setText("There are no open images, please choose a directory");
+            preTextChoiceImage.setText("There are no open images, please choose a directory");
             useDirectory = true;
         }
 //        windowList = new JList<>(model);//
@@ -268,31 +278,31 @@ public class OpenImages extends JFrame implements PlugIn {
      */
     private void $$$setupUI$$$() {
         createUIComponents();
-        main = new JPanel();
-        main.setLayout(new GridLayoutManager(4, 1, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(preText, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        radioButtonChoice = new JPanel();
-        radioButtonChoice.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(radioButtonChoice, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new GridLayoutManager(4, 1, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.add(preTextChoiceImage, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        radioButtonChoicePanel = new JPanel();
+        radioButtonChoicePanel.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.add(radioButtonChoicePanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         useOpenImagesRadioButton = new JRadioButton();
         useOpenImagesRadioButton.setSelected(true);
         useOpenImagesRadioButton.setText("Yes");
-        radioButtonChoice.add(useOpenImagesRadioButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        radioButtonChoicePanel.add(useOpenImagesRadioButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useFileImagesRadioButton = new JRadioButton();
         useFileImagesRadioButton.setText("No");
-        radioButtonChoice.add(useFileImagesRadioButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        validation = new JPanel();
-        validation.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(validation, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        radioButtonChoicePanel.add(useFileImagesRadioButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        validationPanel = new JPanel();
+        validationPanel.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.add(validationPanel, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         OKButton = new JButton();
         OKButton.setText("OK");
-        validation.add(OKButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        validationPanel.add(OKButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cancelButton = new JButton();
         cancelButton.setText("Cancel");
-        validation.add(cancelButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        validationPanel.add(cancelButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         originImages = new JPanel();
         originImages.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        main.add(originImages, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPanel.add(originImages, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         openImages = new JPanel();
         openImages.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         originImages.add(openImages, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -344,7 +354,7 @@ public class OpenImages extends JFrame implements PlugIn {
      * @noinspection ALL
      */
     public JComponent $$$getRootComponent$$$() {
-        return main;
+        return mainPanel;
     }
 
 }
