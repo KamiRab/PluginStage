@@ -3,14 +3,15 @@ package GUI;
 import Detectors.Experiment;
 import Detectors.NucleiDetector;
 import Detectors.ProteinDetector;
-import Helpers.Calibration;
 import Helpers.ImageToAnalyze;
+import Helpers.MeasureCalibration;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
+import ij.gui.WaitForUserDialog;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 
@@ -20,41 +21,56 @@ import java.awt.event.ItemEvent;
 import java.io.File;
 import java.util.ArrayList;
 
-
-//TODO si stack pas coché, message d'erreur
+//TODO progress bar (preview juste truc qui bouge sans longueur et launch avec nombre de tache)
+// progress bar : xexp/nbexp
+//TODO si stack pas coché, throw exception ? flag interrupted ?
+//TODO if error message for extension, not allow launch or preview
 public class PluginCellProt extends JFrame implements PlugIn {
+    //    GUI
     private JLabel pluginTitle;
+    private JPanel mainPanel;
     private JButton launchButton;
     private JButton cancelButton;
-    private JComboBox<Calibration> calibrationCombo;
-    private JPanel mainPanel;
-    private JPanel general;
+
+    //    GUI : TABS
     private JTabbedPane tabs;
+    //    GUI : TABS : GENERAL PARAMETERS
+    private JPanel general;
+    //    Calibration
     private JLabel calibrationLabel;
-    private JLabel analyseSignalInLabel;
+    private JComboBox<MeasureCalibration> calibrationCombo;
+    private JButton addNewCalibrationButton;
+
+    //   Choice of new tabs to add
+    private JLabel detectInLabel;
     private JCheckBox nucleiCheckBox;
     private JCheckBox cytoplasmCheckBox;
-    private JSpinner nrProteinsSpinner;
-    private JButton validateMainConfigurationButton;
+
     private JLabel nrProteinsLabel;
-    private JButton addNewCalibrationButton;
+    private JSpinner nrProteinsSpinner;
+    // Tabs to add class
+    private NucleiPanel detect_nuclei;
+    private NucleiPanel detect_cytoplasm; /*TODO replace with detectCytoplasm class or similar*/
+    private final ArrayList<ProteinQuantificationPanel> quantify_proteins = new ArrayList<>();
+
+    private JButton validateMainConfigurationButton;
+
+    //    Additional choice
     private JCheckBox showImagesResultsCheckBox;
     private JCheckBox saveResultsROIAndCheckBox;
     private JButton chooseResultsDirectoryButton;
     private JTextField resultsDirectoryField;
     private JPanel resultsDirectoryPanel;
-    NucleiPanel detect_nuclei;
-    NucleiPanel detect_cytoplasm; /*TODO replace with detectCytoplasm class or similar*/
-    ArrayList<ProteinQuantificationPanel> quantify_proteins = new ArrayList<>();
-    ImageToAnalyze[] ip_list;
-    //    ArrayList<Detectors.NucleiDetector> nuclei_IP;
-//    ArrayList<ArrayList<Detectors.ProteinDetector>> spot_IP;
-    //    Detectors.Experiment[] experiments;
-    ArrayList<Experiment> experiments;
+
+    //    NON GUI
+    private final ImageToAnalyze[] ip_list;
+    private ArrayList<Experiment> experiments;
+    private boolean interrupt = false;
 
 
     public PluginCellProt(ImageToAnalyze[] imagesToAnalyse, boolean fromDirectory) {
         $$$setupUI$$$();
+//        this.setAlwaysOnTop(true);
         launchButton.setVisible(false);
 //        Get preferences
         /*Helpers.Calibration done in its own method*/
@@ -76,7 +92,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
 
         ip_list = imagesToAnalyse;
 
-        addNewCalibrationButton.addActionListener(e -> new NewCalibrationPanel((DefaultComboBoxModel<Calibration>) calibrationCombo.getModel()).run());
+        addNewCalibrationButton.addActionListener(e -> new NewCalibrationPanel((DefaultComboBoxModel<MeasureCalibration>) calibrationCombo.getModel()).run());
 
         launchButton.addActionListener(e -> {
 //            Set preferences
@@ -89,46 +105,50 @@ public class PluginCellProt extends JFrame implements PlugIn {
             experiments = new ArrayList<>();
             ResultsTable finalResults = new ResultsTable();
             detect_nuclei.setPreferences();
-            for (NucleiDetector nucleiDetector : detect_nuclei.getImages()) {
-                name_experiment = nucleiDetector.getName_experiment();
-                spots = new ArrayList<>();
-                StringBuilder test = new StringBuilder();
-                for (ProteinQuantificationPanel spot_panel : quantify_proteins) {
-                    spot_panel.setPrefs();
-                    for (ProteinDetector proteinDetector : spot_panel.getImages()) {
-                        if (proteinDetector.getName_experiment().equals(name_experiment)) {
-                            spots.add(proteinDetector);
-                            test.append("\n").append(proteinDetector.getImage().getTitle());
+            boolean correctConfig = true;
+            if (detect_nuclei.getImages() != null) {
+                for (NucleiDetector nucleiDetector : detect_nuclei.getImages()) {
+                    name_experiment = nucleiDetector.getName_experiment();
+                    spots = new ArrayList<>();
+                    StringBuilder test = new StringBuilder();
+                    for (ProteinQuantificationPanel spot_panel : quantify_proteins) {
+                        spot_panel.setPreferences();
+                        if (spot_panel.getImages() != null) {
+                            for (ProteinDetector proteinDetector : spot_panel.getImages()) {
+                                if (proteinDetector.getName_experiment().equals(name_experiment)) {
+                                    spots.add(proteinDetector);
+                                    test.append("\n").append(proteinDetector.getImageTitle());
+                                }
+                            }
+                        } else {
+                            correctConfig = false;
                         }
                     }
+                    if (correctConfig) {
+                        IJ.log("Nuclei: " + nucleiDetector.getImageTitle() + " Proteins: " + test);
+                        experiments.add(new Experiment(nucleiDetector, spots, finalResults, showImagesResultsCheckBox.isSelected()));
+                    }
                 }
-                IJ.log("Nuclei: " + nucleiDetector.getImage().getTitle() + " Proteins: " + test);
-                experiments.add(new Experiment(nucleiDetector, spots, finalResults));
             }
-            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() {
-                    for (Experiment exp : experiments) {
-                        exp.run();
-                        int[] ids = WindowManager.getIDList();
-                        for (int id : ids) {
-                            ImagePlus image = WindowManager.getImage(id);
-                            image.changes = false;
-                            image.close();
+            if (correctConfig) {
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        for (Experiment exp : experiments) {
+                            if (!interrupt) {
+                                exp.run(); /*TODO test if bien sauvegardé*/
+                                finalResults.save(ip_list[0].getDirectory() + "\\Results\\results.xls");
+                            }
                         }
-//                        Commands.closeAll();
-//                        WindowManager.closeAllWindows();
+                        finalResults.deleteRow(finalResults.size() - 1);
+                        finalResults.save(ip_list[0].getDirectory() + "\\Results\\results.xls");
+                        finalResults.show("Final Results");
+                        return null;
                     }
-                    finalResults.deleteRow(finalResults.size() - 1);
-                    finalResults.updateResults();
-                    finalResults.show("Final Results");
-                    finalResults.save(ip_list[0].getDirectory() + "\\Results\\results.txt");
-//                    TODO enlever derniere ligne
-                    return null;
-                }
-            };
-            worker.execute();
-            Prefs.savePreferences();
+                };
+                worker.execute();
+                Prefs.savePreferences();
+            }
         });
         validateMainConfigurationButton.addActionListener(e -> {
             createConfig();
@@ -138,31 +158,57 @@ public class PluginCellProt extends JFrame implements PlugIn {
             launchButton.setVisible(true);
             pack();
         });
-        cancelButton.addActionListener(e -> this.dispose());
-        chooseResultsDirectoryButton.addActionListener(e -> {
-            JFileChooser directoryChooser = new JFileChooser(IJ.getDirectory("current"));
-            directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            if (directoryChooser.showOpenDialog(PluginCellProt.this) == JFileChooser.APPROVE_OPTION) {
-                File directory = directoryChooser.getSelectedFile();
-                if (!directory.exists()) {
-                    IJ.error("The directory does not exists");
-                } else if (!directory.isDirectory()) {
-                    IJ.error("It needs to be a directory not a file");
-                } else {
-                    String path = directory.getAbsolutePath();
-                    if (path.split("\\\\").length > 2) {
-                        String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
-                        resultsDirectoryField.setText("..." + path_shorten);
-                    } else {
-                        resultsDirectoryField.setText(path);
-                    }
-                    for (ImageToAnalyze image : ip_list) {
-                        image.setDirectory(resultsDirectoryField.getText());
-                    }
+        cancelButton.addActionListener(e -> {
+            /*this.dispose()*/
+            interrupt = true;
+            if (experiments != null) {
+                for (Experiment exp : experiments
+                ) {
+                    exp.interruptProcess();
+                    closeAllWindows("Process interrupted.");
                 }
+            } else {
+                this.dispose(); /*TODO what to do with cancel button, when to dispose ?*/
             }
         });
+        chooseResultsDirectoryButton.addActionListener(e -> {
+            resultDirectoryChoice();
+        });
         saveResultsROIAndCheckBox.addItemListener(e -> resultsDirectoryPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
+    }
+
+    public static void closeAllWindows(String message) {
+        new WaitForUserDialog(message + "\n WARNING : all the windows will be closed without asking to save changes.").show();
+        int[] ids = WindowManager.getIDList();
+        for (int id : ids) {
+            ImagePlus image = WindowManager.getImage(id);
+            image.changes = false;
+            image.close();
+        }
+    }
+
+    private void resultDirectoryChoice() {
+        JFileChooser directoryChooser = new JFileChooser(IJ.getDirectory("current"));
+        directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        if (directoryChooser.showOpenDialog(PluginCellProt.this) == JFileChooser.APPROVE_OPTION) {
+            File directory = directoryChooser.getSelectedFile();
+            if (!directory.exists()) {
+                IJ.error("The directory does not exists");
+            } else if (!directory.isDirectory()) {
+                IJ.error("It needs to be a directory not a file");
+            } else {
+                String path = directory.getAbsolutePath();
+                if (path.split("\\\\").length > 2) {
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
+                    resultsDirectoryField.setText("..." + path_shorten);
+                } else {
+                    resultsDirectoryField.setText(path);
+                }
+                for (ImageToAnalyze image : ip_list) {
+                    image.setDirectory(resultsDirectoryField.getText());
+                }
+            }
+        }
     }
 
     private void createConfig() {
@@ -189,7 +235,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         for (int tabID = actualNrProteins; tabID < nrProteinTabs; tabID++) {
 //                    quantify_proteins[i] = new ProteinQuantificationPanel(ip_list);
             quantify_proteins.add(new ProteinQuantificationPanel(ip_list, calibrationCombo.getItemAt(calibrationCombo.getSelectedIndex()), tabID, showImagesResultsCheckBox.isSelected()));
-            tabs.addTab("Protein " + (tabID + 1) + " quantification", quantify_proteins.get(tabID).getMain());
+            tabs.addTab("Channel " + (tabID + 1) + " quantification", quantify_proteins.get(tabID).getMain());
         }
     }
 
@@ -211,18 +257,18 @@ public class PluginCellProt extends JFrame implements PlugIn {
 
     private void setCalibrationComboBox() {
 //        Parse calibration file
-        Calibration[] calibrationsArray = Calibration.getCalibrationArrayFromFile();
+        MeasureCalibration[] calibrationsArray = MeasureCalibration.getCalibrationArrayFromFile();
 //        Add calibrations found to ComboBox
-        DefaultComboBoxModel<Calibration> calibrationDefaultComboBoxModel = new DefaultComboBoxModel<>(calibrationsArray);
+        DefaultComboBoxModel<MeasureCalibration> calibrationDefaultComboBoxModel = new DefaultComboBoxModel<>(calibrationsArray);
         calibrationCombo = new JComboBox<>(calibrationDefaultComboBoxModel);
 
 //        Get prefered calibration
-        Calibration calibrationSelected = Calibration.findCalibrationFromName(calibrationsArray, Prefs.get("PluginToName.CalibrationValue", "No calibration"));
-        if (calibrationSelected == null) {
-            calibrationSelected = new Calibration();
-            calibrationDefaultComboBoxModel.addElement(calibrationSelected);
+        MeasureCalibration measureCalibrationSelected = MeasureCalibration.findCalibrationFromName(calibrationsArray, Prefs.get("PluginToName.CalibrationValue", "No calibration"));
+        if (measureCalibrationSelected == null) {
+            measureCalibrationSelected = new MeasureCalibration();
+            calibrationDefaultComboBoxModel.addElement(measureCalibrationSelected);
         }
-        calibrationCombo.setSelectedItem(calibrationSelected);
+        calibrationCombo.setSelectedItem(measureCalibrationSelected);
     }
 
     /**
@@ -251,9 +297,9 @@ public class PluginCellProt extends JFrame implements PlugIn {
         general = new JPanel();
         general.setLayout(new GridLayoutManager(6, 3, new Insets(0, 0, 0, 0), -1, -1));
         tabs.addTab("General", general);
-        analyseSignalInLabel = new JLabel();
-        analyseSignalInLabel.setText("Analyse signal in :");
-        general.add(analyseSignalInLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        detectInLabel = new JLabel();
+        detectInLabel.setText("Detect in");
+        general.add(detectInLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         nucleiCheckBox = new JCheckBox();
         nucleiCheckBox.setSelected(true);
         nucleiCheckBox.setText("Nuclei");
@@ -270,10 +316,10 @@ public class PluginCellProt extends JFrame implements PlugIn {
         general.add(validateMainConfigurationButton, new GridConstraints(5, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(202, 75), null, 0, false));
         general.add(calibrationCombo, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         calibrationLabel = new JLabel();
-        calibrationLabel.setText("Helpers.Calibration");
+        calibrationLabel.setText("Calibration");
         general.add(calibrationLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         addNewCalibrationButton = new JButton();
-        addNewCalibrationButton.setText("Add new calibration");
+        addNewCalibrationButton.setText("Add new measureCalibration");
         general.add(addNewCalibrationButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         saveResultsROIAndCheckBox = new JCheckBox();
         saveResultsROIAndCheckBox.setText("Save results (ROI and images)");

@@ -1,7 +1,7 @@
 package GUI;
 
 import Detectors.ProteinDetector;
-import Helpers.Calibration;
+import Helpers.MeasureCalibration;
 import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -49,7 +49,6 @@ public class ProteinQuantificationPanel {
     private JPanel generalParametersPanel;
     private JPanel choiceMethodPanel;
     private JButton previewButton;
-    private JLabel choiceMethodLabel;
     private JCheckBox findMaximaCheckBox;
     private JCheckBox thresholdCheckBox;
     private JSpinner rollingBallSizeSpinner;
@@ -69,16 +68,14 @@ public class ProteinQuantificationPanel {
     //    NON GUI
     private final ImageToAnalyze[] imagesNames;
     private final DefaultListModel<ImageToAnalyze> model = new DefaultListModel<>();
-    private ArrayList<ImageToAnalyze> selectedChannel;
-    private ArrayList<ProteinDetector> selectedProteins;
-    private final Calibration calibration;
+    private boolean filteredImages;
+    private final MeasureCalibration measureCalibration;
     boolean showImages;
-//    private boolean fromDirectory;
-//    private ImagePlusDisplay[] selectedChannel;
 
-    public ProteinQuantificationPanel(ImageToAnalyze[] ip_list, Calibration calibration, int id, boolean showImages) {
+    //    TODO mean and integrated density always
+    public ProteinQuantificationPanel(ImageToAnalyze[] ip_list, MeasureCalibration measureCalibration, int id, boolean showImages) {
         $$$setupUI$$$();
-        this.calibration = calibration;
+        this.measureCalibration = measureCalibration;
         imagesNames = ip_list;
         this.id = id;
         this.showImages = showImages;
@@ -91,22 +88,18 @@ public class ProteinQuantificationPanel {
             for (ImageToAnalyze imagePlusDisplay : imagesNames) {
                 model.addElement(imagePlusDisplay);
             }
+            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         }
-        filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText());
 //        ITEM LISTENERS
         isAZStackCheckBox.addItemListener(e -> zStackParametersPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         useAMacroCheckBox.addItemListener(e -> macroPannel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         chooseSlicesToUseCheckBox.addItemListener(e -> slicesPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
 
-        findMaximaCheckBox.addItemListener(e -> maximaPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
-        thresholdCheckBox.addItemListener(e -> thresholdPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
+        findMaximaCheckBox.addItemListener(e -> maximaPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED));
+        thresholdCheckBox.addItemListener(e -> thresholdPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED));
         previewButton.addActionListener(e -> {
-            for (int i = 0; i < model.getSize(); i++) {
-                selectedChannel = new ArrayList<>();
-                selectedChannel.add(model.getElementAt(i));
-            }
-            if (selectedChannel != null) {
-                ImageToAnalyze first_image = selectedChannel.get(0);
+            if (model.getSize() > 0) {
+                ImageToAnalyze first_image = model.firstElement();
                 String name_experiment = first_image.getImagePlus().getTitle().split(imageEndingField.getText())[0];
                 String protein_name = proteinChannelField.getText();
                 ProteinDetector previewPD = getProteinDetector(first_image, name_experiment, protein_name, true);
@@ -122,7 +115,7 @@ public class ProteinQuantificationPanel {
                 IJ.error("There is no image to be used to do a preview.");
             }
         });
-        imageEndingField.addActionListener(e -> filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText()));
+        imageEndingField.addActionListener(e -> filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel));
     }
 
     private void getPreferences() {
@@ -141,9 +134,9 @@ public class ProteinQuantificationPanel {
         macroArea.append(Prefs.get("PluginToName.macroProtein_" + id, " ")); /*TODO default macro ?*/
         rollingBallSizeSpinner.setValue(Prefs.get("PluginToName.rollingballSizeProtein_" + id, 10));
         findMaximaCheckBox.setSelected(Prefs.get("PluginToName.findMaximaSelectedProtein_" + id, true));
-        maximaPanel.setVisible(findMaximaCheckBox.isSelected());
+        maximaPanel.setEnabled(findMaximaCheckBox.isSelected());
         thresholdCheckBox.setSelected(Prefs.get("PluginToName.thresholdSelectedProtein_" + id, false));
-        thresholdPanel.setVisible(thresholdCheckBox.isSelected());
+        thresholdPanel.setEnabled(thresholdCheckBox.isSelected());
         prominenceSpinner.setValue(Prefs.get("PluginToName.prominence_" + id, 500));
         threshMethodsCombo.setSelectedItem(Prefs.get("PluginToName.thresholdMethodProtein_" + id, "Li"));
         minSizeSpotSpinner.setValue(Prefs.get("PluginToName.minSizeSpot_" + id, 10));
@@ -152,9 +145,9 @@ public class ProteinQuantificationPanel {
     private ProteinDetector getProteinDetector(ImageToAnalyze first_image, String name_experiment, String protein_name, boolean isPreview) {
         ProteinDetector proteinDetector;
         if (isPreview) {
-            proteinDetector = new ProteinDetector(first_image.getImagePlus(), protein_name, name_experiment, (double) rollingBallSizeSpinner.getValue()/*, isPreview*/, calibration, null, true);
+            proteinDetector = new ProteinDetector(first_image.getImagePlus(), protein_name, name_experiment, (double) rollingBallSizeSpinner.getValue()/*, isPreview*/, measureCalibration, null, true);
         } else {
-            proteinDetector = new ProteinDetector(first_image.getImagePlus(), protein_name, name_experiment, (double) rollingBallSizeSpinner.getValue()/*, isPreview*/, calibration, first_image.getDirectory(), showImages);
+            proteinDetector = new ProteinDetector(first_image.getImagePlus(), protein_name, name_experiment, (double) rollingBallSizeSpinner.getValue()/*, isPreview*/, measureCalibration, first_image.getDirectory(), showImages);
         }
         if (isAZStackCheckBox.isSelected()) {
             if (chooseSlicesToUseCheckBox.isSelected()) {
@@ -180,16 +173,22 @@ public class ProteinQuantificationPanel {
     }
 
     public ArrayList<ProteinDetector> getImages() {
-        selectedProteins = new ArrayList<>();
+        ArrayList<ProteinDetector> selectedProteins = new ArrayList<>();
         ImageToAnalyze image;
         String name_experiment;
         String protein_name = proteinChannelField.getText();
-        for (int i = 0; i < model.getSize(); i++) {
-            image = model.getElementAt(i);
-            name_experiment = image.getImagePlus().getTitle().split(imageEndingField.getText())[0];
-            selectedProteins.add(getProteinDetector(image, name_experiment, protein_name, false));
+        /*if no image selected*/
+        if (!filteredImages) {
+            IJ.error("No images given for protein " + (id + 1) + ". Please verify the image ending corresponds to at least an image.");
+            return null;
+        } else {
+            for (int i = 0; i < model.getSize(); i++) {
+                image = model.getElementAt(i);
+                name_experiment = image.getImagePlus().getTitle().split(imageEndingField.getText())[0];
+                selectedProteins.add(getProteinDetector(image, name_experiment, protein_name, false));
+            }
+            return selectedProteins;
         }
-        return selectedProteins;
     }
 
     /**
@@ -218,11 +217,11 @@ public class ProteinQuantificationPanel {
         chooseFilePanel.add(imageEndingField, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         errorImageEndingLabel = new JLabel();
         errorImageEndingLabel.setText("No image corresponding to ending");
-        chooseFilePanel.add(errorImageEndingLabel, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        chooseFilePanel.add(errorImageEndingLabel, new GridConstraints(1, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer1 = new Spacer();
         chooseFilePanel.add(spacer1, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 50), null, null, 0, false));
         zProjPanel = new JPanel();
-        zProjPanel.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        zProjPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(zProjPanel, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         zProjPanel.setBorder(BorderFactory.createTitledBorder(null, "Preprocessing", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         isAZStackCheckBox = new JCheckBox();
@@ -230,8 +229,8 @@ public class ProteinQuantificationPanel {
         isAZStackCheckBox.setText("Is a z-stack ?");
         zProjPanel.add(isAZStackCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useAMacroCheckBox = new JCheckBox();
-        useAMacroCheckBox.setText("Use a macro");
-        zProjPanel.add(useAMacroCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        useAMacroCheckBox.setText("Use macro code");
+        zProjPanel.add(useAMacroCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         zStackParametersPanel = new JPanel();
         zStackParametersPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         zProjPanel.add(zStackParametersPanel, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -254,14 +253,18 @@ public class ProteinQuantificationPanel {
         zStackParametersPanel.add(chooseSlicesToUseCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         macroPannel = new JPanel();
         macroPannel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        zProjPanel.add(macroPannel, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        zProjPanel.add(macroPannel, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         macroAreaScroll = new JScrollPane();
         macroPannel.add(macroAreaScroll, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         macroArea = new JTextArea();
         macroArea.setRows(2);
         macroAreaScroll.setViewportView(macroArea);
         final Spacer spacer2 = new Spacer();
-        zProjPanel.add(spacer2, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 50), null, null, 0, false));
+        zProjPanel.add(spacer2, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 50), null, null, 0, false));
+        rollingBallSizeLabel = new JLabel();
+        rollingBallSizeLabel.setText("Rolling ball size");
+        zProjPanel.add(rollingBallSizeLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        zProjPanel.add(rollingBallSizeSpinner, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         generalParametersPanel = new JPanel();
         generalParametersPanel.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(generalParametersPanel, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -269,15 +272,12 @@ public class ProteinQuantificationPanel {
         previewButton.setText("Preview");
         generalParametersPanel.add(previewButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         choiceMethodPanel = new JPanel();
-        choiceMethodPanel.setLayout(new GridLayoutManager(4, 2, new Insets(0, 0, 0, 0), -1, -1));
+        choiceMethodPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         generalParametersPanel.add(choiceMethodPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        choiceMethodPanel.setBorder(BorderFactory.createTitledBorder(null, "General parameters", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        choiceMethodLabel = new JLabel();
-        choiceMethodLabel.setText("Which method do you want to use ?");
-        choiceMethodPanel.add(choiceMethodLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        choiceMethodPanel.setBorder(BorderFactory.createTitledBorder(null, "Spot detection method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         maximaPanel = new JPanel();
         maximaPanel.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        choiceMethodPanel.add(maximaPanel, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        choiceMethodPanel.add(maximaPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         maximaPanel.setBorder(BorderFactory.createTitledBorder(null, "Find maxima method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         prominenceLabel = new JLabel();
         prominenceLabel.setText("Prominence");
@@ -285,7 +285,7 @@ public class ProteinQuantificationPanel {
         maximaPanel.add(prominenceSpinner, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         thresholdPanel = new JPanel();
         thresholdPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        choiceMethodPanel.add(thresholdPanel, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        choiceMethodPanel.add(thresholdPanel, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         thresholdPanel.setBorder(BorderFactory.createTitledBorder(null, "Threshold method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         minSizeSpotLabel = new JLabel();
         minSizeSpotLabel.setText("Minimum size of spot");
@@ -295,18 +295,14 @@ public class ProteinQuantificationPanel {
         threshMethodsLabel = new JLabel();
         threshMethodsLabel.setText("Threshold Method");
         thresholdPanel.add(threshMethodsLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        rollingBallSizeLabel = new JLabel();
-        rollingBallSizeLabel.setText("Rolling ball size");
-        choiceMethodPanel.add(rollingBallSizeLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        choiceMethodPanel.add(rollingBallSizeSpinner, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         findMaximaCheckBox = new JCheckBox();
         findMaximaCheckBox.setSelected(true);
         findMaximaCheckBox.setText("Find maxima");
-        choiceMethodPanel.add(findMaximaCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        choiceMethodPanel.add(findMaximaCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         thresholdCheckBox = new JCheckBox();
         thresholdCheckBox.setSelected(true);
         thresholdCheckBox.setText("Threshold");
-        choiceMethodPanel.add(thresholdCheckBox, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        choiceMethodPanel.add(thresholdCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         proteinChannelField = new JTextField();
         proteinChannelField.setText("");
         mainPanel.add(proteinChannelField, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
@@ -325,8 +321,6 @@ public class ProteinQuantificationPanel {
     public void filterModel(DefaultListModel<ImageToAnalyze> model, String filter) {
         for (ImageToAnalyze image : imagesNames) {
             String title = image.getImageName();
-//            int lastPoint = title.lastIndexOf(".");
-//            String title_wo_ext = title.substring(0, lastPoint);
             String title_wo_ext = ImageToAnalyze.name_without_extension(title);
             if (!title.endsWith(filter) && !title_wo_ext.endsWith(filter)) {
                 if (model.contains(image)) {
@@ -339,12 +333,15 @@ public class ProteinQuantificationPanel {
             }
         }
         if (model.isEmpty()) {
+            /*if no image corresponds to the filter, display all images names and an error*/
             for (ImageToAnalyze imagePlusDisplay : imagesNames) {
                 model.addElement(imagePlusDisplay);
             }
+            filteredImages = false; /*there are no images corresponding to the label*/
             errorImageEndingLabel.setVisible(true);
         } else {
             errorImageEndingLabel.setVisible(false);
+            filteredImages = true; /*there are images corresponding to the label*/
         }
     }
 
@@ -370,7 +367,7 @@ public class ProteinQuantificationPanel {
         lastSliceSpinner = new JSpinner(new SpinnerNumberModel(33, 0, 9999, 1));
     }
 
-    public void setPrefs() {
+    public void setPreferences() {
         Prefs.set("PluginToName.proteinName_" + id, proteinChannelField.getText());
         Prefs.set("PluginToName.proteinEnding_" + id, imageEndingField.getText());
         Prefs.set("PluginToName.zStackProtein_" + id, isAZStackCheckBox.isSelected());

@@ -3,6 +3,8 @@ package Helpers;
 import ij.IJ;
 import ij.ImagePlus;
 
+import javax.swing.*;
+
 /**
  * Class to facilitate display of ImagePlus names
  * and for images from directory creates the ImagePlus instances at the necessary time
@@ -32,6 +34,7 @@ public class ImageToAnalyze {
      */
     public ImageToAnalyze(ImagePlus imagePlus){
         this.imagePlus=imagePlus;
+        this.imagePlus.setCalibration(null);
         this.imageName=imagePlus.getTitle();
         directory=null;
     }
@@ -45,6 +48,7 @@ public class ImageToAnalyze {
     public ImagePlus getImagePlus() {
         if (imagePlus==null){
             this.imagePlus=IJ.openImage(directory+"\\"+imageName);
+            this.imagePlus.setCalibration(null); /*TODO ?*/
         }
         return imagePlus;
     }
@@ -100,4 +104,34 @@ public class ImageToAnalyze {
             return image_name;
         }
     }
+
+    public static boolean filterModel(DefaultListModel<ImageToAnalyze> model, String filter, ImageToAnalyze[] imagesNames, JLabel errorImageEndingLabel) {
+        for (ImageToAnalyze image : imagesNames) {
+            String title = image.getImageName();
+            String title_wo_ext = ImageToAnalyze.name_without_extension(title);
+            if (!title.endsWith(filter) && !title_wo_ext.endsWith(filter)) {
+                if (model.contains(image)) {
+                    model.removeElement(image);
+                }
+            } else {
+                if (!model.contains(image)) {
+                    model.addElement(image);
+                }
+            }
+        }
+        if (model.isEmpty()) {
+            /*if no image corresponds to the filter, display all images names and an error*/
+            for (ImageToAnalyze imagePlusDisplay : imagesNames) {
+                model.addElement(imagePlusDisplay);
+            }
+            errorImageEndingLabel.setVisible(true);
+//            filteredImages = false; /*there are no images corresponding to the label*/
+            return false; /*there are no images corresponding to the label*/
+        } else {
+            errorImageEndingLabel.setVisible(false);
+//            filteredImages = true; /*there are images corresponding to the label*/
+            return true; /*there are images corresponding to the label*/
+        }
+    }
+
 }

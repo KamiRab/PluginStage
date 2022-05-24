@@ -4,6 +4,7 @@ import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import ij.IJ;
+import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
 import ij.plugin.PlugIn;
@@ -23,6 +24,7 @@ import java.util.Locale;
 import static ij.IJ.selectWindow;
 
 /*TODO dernier repertoire actif comme point de départ*/
+//TODO régler probleme images ouvertes et nullité
 public class OpenImages extends JFrame implements PlugIn {
     private JPanel openImages;
     private JPanel directoryImages;
@@ -52,6 +54,7 @@ public class OpenImages extends JFrame implements PlugIn {
     DefaultListModel<ImageToAnalyze> openImagesModel = new DefaultListModel<>();
     DefaultListModel<String> fileModel = new DefaultListModel<>();
 
+
     public OpenImages() {
         $$$setupUI$$$();
 //        Look for open images to see if the choose from ImageJ panel is necessary
@@ -65,6 +68,12 @@ public class OpenImages extends JFrame implements PlugIn {
             pack();
         } else {
             /*if opened images, by default the directory panel is hidden*/
+            openImagesModel.removeElement(null);
+            for (int id_Image : WindowManager.getIDList()) {
+                ImageToAnalyze image = new ImageToAnalyze(WindowManager.getImage(id_Image));
+                openImagesModel.addElement(image);
+                /*TODO mettre ID + title puis parseint*/
+            }
             directoryImages.setVisible(false);
             pack();
         }
@@ -232,14 +241,11 @@ public class OpenImages extends JFrame implements PlugIn {
 //    }
 
     private void createUIComponents() {
-        if (WindowManager.getImageCount() > 0)
-            for (int id_Image : WindowManager.getIDList()) {
-                ImageToAnalyze image = new ImageToAnalyze(WindowManager.getImage(id_Image));
-                openImagesModel.addElement(image);
-                /*TODO mettre ID + title puis parseint*/
-            }
+        openImagesModel.addElement(null);
         windowList = new JList<>(openImagesModel);
-        fileModel.addElement("No file");
+        if (!fileModel.contains("No file")) {
+            fileModel.addElement("No file");
+        }
         choosenDirectoryFiles = new JList<>(fileModel);
         windowList.setSelectedIndex(0);
 
@@ -257,14 +263,14 @@ public class OpenImages extends JFrame implements PlugIn {
     }
 
     public static void main(String[] args) {
-//        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-//        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-//        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-//        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-//        for (ImagePlus images : imagesToAnalyze
-//        ) {
-//            images.show();
-//        }
+        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
+        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
+        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+        for (ImagePlus images : imagesToAnalyze
+        ) {
+            images.show();
+        }
         OpenImages openImages = new OpenImages();
         openImages.run(null);
     }
@@ -296,6 +302,7 @@ public class OpenImages extends JFrame implements PlugIn {
         mainPanel.add(validationPanel, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         OKButton = new JButton();
         OKButton.setText("OK");
+        OKButton.setToolTipText("Sets ok");
         validationPanel.add(OKButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cancelButton = new JButton();
         cancelButton.setText("Cancel");
@@ -328,6 +335,7 @@ public class OpenImages extends JFrame implements PlugIn {
         defaultComboBoxModel1.addElement(".STK");
         defaultComboBoxModel1.addElement("Other");
         extension.setModel(defaultComboBoxModel1);
+        extension.setToolTipText("is a combo box");
         directoryImages.add(extension, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         chooseDirectoryButton = new JButton();
         chooseDirectoryButton.setText("Choose directory");

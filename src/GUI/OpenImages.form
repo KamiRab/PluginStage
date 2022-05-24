@@ -55,6 +55,7 @@
             </constraints>
             <properties>
               <text value="OK"/>
+              <toolTipText value="Sets ok"/>
             </properties>
           </component>
           <component id="39aa" class="javax.swing.JButton" binding="cancelButton" default-binding="true">
@@ -142,6 +143,7 @@
                     <item value=".STK"/>
                     <item value="Other"/>
                   </model>
+                  <toolTipText value="is a combo box"/>
                 </properties>
               </component>
               <component id="74208" class="javax.swing.JButton" binding="chooseDirectoryButton" default-binding="true">

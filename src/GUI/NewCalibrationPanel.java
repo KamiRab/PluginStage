@@ -1,6 +1,6 @@
 package GUI;
 
-import Helpers.Calibration;
+import Helpers.MeasureCalibration;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import ij.IJ;
@@ -9,7 +9,9 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
+
 //TODO validate ==> modify the entire file
 /*TODO if name already exists, error ?*/
 public class NewCalibrationPanel extends JFrame {
@@ -18,31 +20,63 @@ public class NewCalibrationPanel extends JFrame {
     private JTable calibrationTable;
     private JTextField addNameField;
     private JTextField addValueField;
-    private JTextField addUnitFIeld;
+    private JTextField addUnitField;
     private JButton addButton;
     private JScrollPane calibrationTableScroll;
     private JPanel addCalibrationPanel;
     private DefaultTableModel tableModel;
-    private final ArrayList<Calibration> calibrationToAdd = new ArrayList<>();
 
-    public NewCalibrationPanel(DefaultComboBoxModel<Calibration> calibration_values) {
+    public NewCalibrationPanel(DefaultComboBoxModel<MeasureCalibration> calibrationValues) {
         $$$setupUI$$$();
+//        ADD CALIBRATION
         addButton.addActionListener(e -> {
-            if (addNameField.getText().length() > 0 && addValueField.getText().length() > 0 && addUnitFIeld.getText().length() > 0) {
-                tableModel.addRow(new Object[]{addNameField.getText(), addValueField.getText(), addUnitFIeld.getText()});
-                calibrationToAdd.add(new Calibration(addNameField.getText(), addValueField.getText(), addUnitFIeld.getText()));
+//            Verification that all fields are filled
+            if (addNameField.getText().length() > 0 && addValueField.getText().length() > 0 && addUnitField.getText().length() > 0) {
+//                Verification that the name does not already exists
+                boolean nameAlreadyExists = false;
+                for (int row = 0; row < tableModel.getRowCount(); row++) {
+                    if (addNameField.getText().equals(tableModel.getValueAt(row, 0))) {
+                        nameAlreadyExists = true;
+                        IJ.error("The calibration name is not unique, it will not be added");
+                    }
+                }
+//                Add to table model and empty the field
+                if (!nameAlreadyExists) {
+                    tableModel.addRow(new String[]{addNameField.getText(), addValueField.getText(), addUnitField.getText()});
+                    addNameField.setText("");
+                    addValueField.setText("");
+                    addUnitField.setText("");
+                }
             } else {
                 IJ.error("All the fields need to be filled");
             }
         });
+//        Rewrite file if the user validate the modifications
         validateButton.addActionListener(e -> {
-            for (Calibration calibration : calibrationToAdd
-            ) {
-                calibration.addCalibrationToFile();
-                calibration_values.addElement(calibration);
+            IJ.log("table tableModified");
+            try {
+                MeasureCalibration.createCalibrationFile(true);
+            } catch (IOException ex) {
+                IJ.error("The calibration file could not be found and could not be created." +
+                        "It could be a problem of access rights of the ImageJ/Fiji preferences folder."); /*TODO expert option for other directory ?*/
+                ex.printStackTrace();
             }
-//            tableModel.getValueAt()
-//            calibration_values.addElement(new Helpers.Calibration(nameField.getText(), valueField.getText(), unitField.getText()));
+            ArrayList<String> nameArrayList = new ArrayList<>();
+            calibrationValues.removeAllElements();
+            for (int row = 0; row < tableModel.getRowCount(); row++) {
+                String calibrationName = (String) tableModel.getValueAt(row, 0);
+                if (calibrationName.length() > 0 && String.valueOf(tableModel.getValueAt(row, 0)).length() > 0 && ((String) tableModel.getValueAt(row, 2)).length() > 0) {
+                    if (nameArrayList.contains(calibrationName)) {
+                        IJ.error("There are multiple calibrations with te name " + calibrationName
+                                + ". Only the first one will be written on the file.");
+                    } else {
+                        nameArrayList.add(calibrationName);
+                        MeasureCalibration calibration = new MeasureCalibration((String) tableModel.getValueAt(row, 0), String.valueOf(tableModel.getValueAt(row, 1)), (String) tableModel.getValueAt(row, 2));
+                        calibration.addCalibrationToFile();
+                        calibrationValues.addElement(calibration);
+                    }
+                }
+            }
         });
 //        cancelButton.addActionListener(e -> this.dispose());
     }
@@ -51,12 +85,32 @@ public class NewCalibrationPanel extends JFrame {
         setTitle("Add a calibration");
         setContentPane(this.mainPanel);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                System.out.println(info);
+                if ("Windows".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+//                        break;
+                }
+            }
+//            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+//            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        }
+        SwingUtilities.updateComponentTreeUI(mainPanel);
         pack();
         setVisible(true);
     }
 
     public static void main(String[] args) {
-        NewCalibrationPanel newCalibrationPanel = new NewCalibrationPanel(null);
+        NewCalibrationPanel newCalibrationPanel = new NewCalibrationPanel(new DefaultComboBoxModel<>());
         newCalibrationPanel.run();
     }
 
@@ -81,14 +135,14 @@ public class NewCalibrationPanel extends JFrame {
         addCalibrationPanel = new JPanel();
         addCalibrationPanel.setLayout(new GridLayoutManager(1, 4, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(addCalibrationPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        addCalibrationPanel.setBorder(BorderFactory.createTitledBorder(null, "Add a calibration", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        addCalibrationPanel.setBorder(BorderFactory.createTitledBorder(null, "Add a measureCalibration", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         addNameField = new JTextField();
         addCalibrationPanel.add(addNameField, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         addValueField = new JTextField();
         addCalibrationPanel.add(addValueField, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        addUnitFIeld = new JTextField();
-        addUnitFIeld.setText("");
-        addCalibrationPanel.add(addUnitFIeld, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        addUnitField = new JTextField();
+        addUnitField.setText("");
+        addCalibrationPanel.add(addUnitField, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         addButton = new JButton();
         addButton.setText("Add");
         addCalibrationPanel.add(addButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -103,14 +157,14 @@ public class NewCalibrationPanel extends JFrame {
 
     private void createUIComponents() {
         // TODO: place custom component creation code here
-        ArrayList<Calibration> calibrations = Calibration.getCalibrationFromFile();
+        ArrayList<MeasureCalibration> measureCalibrations = MeasureCalibration.getCalibrationFromFile();
         String[] header = new String[]{"Name", "Value", "Unit"};
-        Object[][] content = new Object[calibrations.size()][header.length];
-        for (int row = 0; row < calibrations.size(); row++) {
-            Calibration calibration = calibrations.get(row);
-            content[row][0] = calibration.getName();
-            content[row][1] = calibration.getPixelArea();
-            content[row][2] = calibration.getUnit();
+        Object[][] content = new Object[measureCalibrations.size()][header.length];
+        for (int row = 0; row < measureCalibrations.size(); row++) {
+            MeasureCalibration measureCalibration = measureCalibrations.get(row);
+            content[row][0] = measureCalibration.getName();
+            content[row][1] = measureCalibration.getPixelLength();
+            content[row][2] = measureCalibration.getUnit();
         }
         tableModel = new DefaultTableModel(content, header);
         calibrationTable = new JTable(tableModel);
