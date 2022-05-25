@@ -162,6 +162,7 @@ public class ProteinDetector {
             if (showImage){
                 preprocessed.show();
             }
+
             thresholdIP = preprocessed.duplicate();
             if (spotByThreshold) {
                 thresholdIP = detector.getThresholdMask(preprocessed);
@@ -191,6 +192,11 @@ public class ProteinDetector {
     }
 
     public void analysisPerNucleus(int nucleus, ResultsTable resultsTableFinal) {
+        imageToMeasure.setRoi(nucleiROIs[nucleus]);
+        ResultsTable rawMesures = new ResultsTable();
+        Analyzer analyzer = new Analyzer(imageToMeasure, Measurements.MEAN +Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
+        analyzer.measure();
+        detector.setResultsAndRename(rawMesures,resultsTableFinal,0); /*first line only*/
         if (spotByfindMaxima) {
             findMaximaPerNucleus(nucleus, resultsTableFinal);
         }
@@ -204,8 +210,10 @@ public class ProteinDetector {
         thresholdIP.setRoi(nucleiROIs[nucleus]);
         thresholdIP.getProcessor().invertLut();
         roiManagerFoci = detector.analyzeParticles(thresholdIP);
-        roiManagerFoci.save(resultsDirectory +"\\Results\\ROI\\"+ ImageToAnalyze.name_without_extension(image.getTitle()) + "_threshold_"+(nucleus+1)+"_roi.zip");
-        IJ.log("The ROIs of the nucleus "+ nucleus+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"\\Results\\ROIs\\");
+        if (resultsDirectory!=null){
+            roiManagerFoci.save(resultsDirectory +"\\Results\\ROI\\"+ ImageToAnalyze.name_without_extension(image.getTitle()) + "_threshold_"+(nucleus+1)+"_roi.zip");
+            IJ.log("The ROIs of the nucleus "+ (nucleus+1)+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"\\Results\\ROIs\\");
+        }
         int number_spot = roiManagerFoci.getCount();
         ResultsTable resultsTable = new ResultsTable();
         Analyzer analyzer = new Analyzer(imageToMeasure, Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY, resultsTable);
@@ -235,7 +243,7 @@ public class ProteinDetector {
             if (!wasSaved) {
                 IJ.error("Could not save ROIs");
             }else {
-                IJ.log("The ROIs of the nucleus "+ nucleus+" of the image "+image.getTitle() + " by find maxima method were saved in "+ resultsDirectory+"\\Results\\ROIs\\");
+                IJ.log("The ROIs of the nucleus "+ (nucleus+1)+" of the image "+image.getTitle() + " by find maxima method were saved in "+ resultsDirectory+"\\Results\\ROIs\\");
             }
         }
         int size = 0;

@@ -346,18 +346,18 @@ public class PluginCellProt extends JFrame implements PlugIn {
 
 
     public static void main(String[] args) {
-//        Helpers.ImageToAnalyze[] imagesToAnalyze = new Helpers.ImageToAnalyze[6];
-//        imagesToAnalyze[0] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF"));
-//        imagesToAnalyze[1] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF"));
-//        imagesToAnalyze[2] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF"));
-//        imagesToAnalyze[3] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w31 DAPI 405.TIF"));
-//        imagesToAnalyze[4] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w11 CY5.TIF"));
-//        imagesToAnalyze[5] = new Helpers.ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w21 FITC.TIF"));
-        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[4];
-        imagesToAnalyze[0] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w21 DAPI 405.TIF");
-        imagesToAnalyze[1] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w31 FITC.TIF");
-        imagesToAnalyze[2] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w21 DAPI 405.TIF");
-        imagesToAnalyze[3] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w31 FITC.TIF");
+        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[6];
+        imagesToAnalyze[0] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF"));
+        imagesToAnalyze[1] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF"));
+        imagesToAnalyze[2] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF"));
+        imagesToAnalyze[3] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w31 DAPI 405.TIF"));
+        imagesToAnalyze[4] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w11 CY5.TIF"));
+        imagesToAnalyze[5] = new ImageToAnalyze(IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell004_w21 FITC.TIF"));
+//        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[4];
+//        imagesToAnalyze[0] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w21 DAPI 405.TIF");
+//        imagesToAnalyze[1] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w31 FITC.TIF");
+//        imagesToAnalyze[2] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w21 DAPI 405.TIF");
+//        imagesToAnalyze[3] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w31 FITC.TIF");
 //        imagesToAnalyze[0] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_2h_w21 DAPI 405.TIF"));
 //        imagesToAnalyze[1] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_2h_w31 FITC.TIF"));
 //        imagesToAnalyze[2] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_6h_w21 DAPI 405.TIF"));
