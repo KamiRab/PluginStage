@@ -30,7 +30,7 @@ public class Measures extends JFrame {
     private JButton validateButton;
     private JButton cancelButton;
     private JPanel measuresPanel;
-    private ArrayList<String> measurements_names = new ArrayList<>();
+    private final ArrayList<String> measurements_names = new ArrayList<>();
     //    private String[] measurements_names;
     private int measurements_value = 0;
 

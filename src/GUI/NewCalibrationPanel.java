@@ -12,8 +12,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.util.ArrayList;
 
-//TODO validate ==> modify the entire file
-/*TODO if name already exists, error ?*/
 public class NewCalibrationPanel extends JFrame {
     private JPanel mainPanel;
     private JButton validateButton;
@@ -53,7 +51,6 @@ public class NewCalibrationPanel extends JFrame {
         });
 //        Rewrite file if the user validate the modifications
         validateButton.addActionListener(e -> {
-            IJ.log("table tableModified");
             try {
                 MeasureCalibration.createCalibrationFile(true);
             } catch (IOException ex) {
@@ -83,28 +80,23 @@ public class NewCalibrationPanel extends JFrame {
 
     public void run() {
         setTitle("Add a calibration");
+        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/IconPlugin.png")));
         setContentPane(this.mainPanel);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                System.out.println(info);
-                if ("Windows".equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-//                        break;
-                }
-            }
-//            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-//            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (UnsupportedLookAndFeelException e) {
-            e.printStackTrace();
-        }
-        SwingUtilities.updateComponentTreeUI(mainPanel);
+//        try {
+//            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+//                System.out.println(info);
+//                if ("Windows".equals(info.getName())) {
+//                    UIManager.setLookAndFeel(info.getClassName());
+////                        break;
+//                }
+//            }
+////            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+////            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+//        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
+//            e.printStackTrace();
+//        }
+//        SwingUtilities.updateComponentTreeUI(mainPanel);
         pack();
         setVisible(true);
     }
@@ -156,7 +148,6 @@ public class NewCalibrationPanel extends JFrame {
     }
 
     private void createUIComponents() {
-        // TODO: place custom component creation code here
         ArrayList<MeasureCalibration> measureCalibrations = MeasureCalibration.getCalibrationFromFile();
         String[] header = new String[]{"Name", "Value", "Unit"};
         Object[][] content = new Object[measureCalibrations.size()][header.length];
@@ -168,9 +159,5 @@ public class NewCalibrationPanel extends JFrame {
         }
         tableModel = new DefaultTableModel(content, header);
         calibrationTable = new JTable(tableModel);
-//        TableColumn nameColumn = calibrationTable.getColumnModel().getColumn(0);
-//        nameColumn.setCellEditor(new DefaultCellEditor(new JTextField()));
-//        TableColumn valueColumn = calibrationTable.getColumnModel().getColumn(1);
-//        TableColumn unitColumn = calibrationTable.getColumnModel().getColumn(2);
     }
 }

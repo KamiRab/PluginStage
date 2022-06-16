@@ -29,7 +29,7 @@ public class MeasureCalibration {
 //        SET NAME
         this.name = name;
 //        SET VALUE
-        /*The values are considered as given as length so they need to be converted to areas by multiplicating them*/
+        /*The values are considered as given as length, so they need to be converted to areas by multiplicating them*/
         double value_tmp;
         try {
             value_tmp = Double.parseDouble(pixelLength);
@@ -41,11 +41,7 @@ public class MeasureCalibration {
         this.pixelArea = value_tmp*value_tmp;
 
 //        SET UNIT
-        /*convert micro in greek letter */
-        if (unit.startsWith("um")){
-            unit = "\u03BCm";
-        }
-        this.unit = unit/*+"\u00B2"*/;
+        this.unit = unit;
     }
 
     /**
@@ -198,7 +194,9 @@ public class MeasureCalibration {
 
     @Override
     public String toString() {
-        return name+"(x"+ d2s(pixelLength,3) +","+ unit+")";
+        /*convert micro in greek letter */
+        String unitMod = unit.startsWith("um")?"\u03BCm":unit;
+        return name+"(x"+ d2s(pixelLength,3) +" "+ unitMod+")";
     }
 
     /**

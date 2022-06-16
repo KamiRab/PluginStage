@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="GUI.ProteinQuantificationPanel">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="GUI.SpotPanel">
   <grid id="27dc6" binding="mainPanel" layout-manager="GridLayoutManager" row-count="4" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="731" height="574"/>
+      <xy x="20" y="20" width="731" height="596"/>
     </constraints>
     <properties/>
     <border type="none" title=""/>
@@ -26,7 +26,7 @@
               <component id="9a95" class="javax.swing.JList" binding="imageList" custom-create="true">
                 <constraints/>
                 <properties>
-                  <enabled value="false"/>
+                  <enabled value="true"/>
                   <selectionMode value="0"/>
                 </properties>
               </component>
@@ -65,7 +65,7 @@
           </vspacer>
         </children>
       </grid>
-      <grid id="bd432" binding="zProjPanel" layout-manager="GridLayoutManager" row-count="3" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="bd432" binding="zProjPanel" layout-manager="GridLayoutManager" row-count="4" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -84,7 +84,7 @@
           </component>
           <component id="96b43" class="javax.swing.JCheckBox" binding="useAMacroCheckBox" default-binding="true">
             <constraints>
-              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="Use macro code"/>
@@ -152,7 +152,7 @@
           <grid id="ecb1b" binding="macroPannel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
             <margin top="0" left="0" bottom="0" right="0"/>
             <constraints>
-              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -176,14 +176,14 @@
           </grid>
           <vspacer id="13df9">
             <constraints>
-              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+              <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
                 <minimum-size width="-1" height="50"/>
               </grid>
             </constraints>
           </vspacer>
           <component id="43d3b" class="javax.swing.JCheckBox" binding="useRollingBallCheckBox">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="Substract background"/>
@@ -192,7 +192,7 @@
           <grid id="6872d" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
             <margin top="0" left="0" bottom="0" right="0"/>
             <constraints>
-              <grid row="1" column="1" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <grid row="2" column="1" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -213,6 +213,14 @@
               </component>
             </children>
           </grid>
+          <component id="c5334" class="javax.swing.JCheckBox" binding="showPreprocessingImageCheckBox" default-binding="true">
+            <constraints>
+              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Show preprocessing image"/>
+            </properties>
+          </component>
         </children>
       </grid>
       <grid id="34cb2" binding="generalParametersPanel" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -239,7 +247,7 @@
             <properties/>
             <border type="none" title="Spot detection method"/>
             <children>
-              <grid id="6ad9d" binding="maximaPanel" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="6ad9d" binding="maximaPanel" layout-manager="GridLayoutManager" row-count="3" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -257,13 +265,37 @@
                   </component>
                   <component id="e6a1" class="javax.swing.JSpinner" binding="prominenceSpinner" custom-create="true">
                     <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties/>
                   </component>
+                  <component id="373c7" class="javax.swing.JCheckBox" binding="showMaximaImageCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Show maxima image"/>
+                    </properties>
+                  </component>
+                  <component id="4cc81" class="javax.swing.JCheckBox" binding="saveMaximaImageCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save maxima image"/>
+                    </properties>
+                  </component>
+                  <component id="33de" class="javax.swing.JCheckBox" binding="saveMaximaROIsCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="2" column="0" row-span="1" col-span="3" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save maxima ROIs"/>
+                    </properties>
+                  </component>
                 </children>
               </grid>
-              <grid id="457c7" binding="thresholdPanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="457c7" binding="thresholdPanel" layout-manager="GridLayoutManager" row-count="4" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -281,15 +313,7 @@
                   </component>
                   <component id="d2ad9" class="javax.swing.JSpinner" binding="minSizeSpotSpinner" custom-create="true">
                     <constraints>
-                      <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                  </component>
-                  <component id="649cc" class="javax.swing.JComboBox" binding="threshMethodsCombo" custom-create="true">
-                    <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <preferred-size width="150" height="-1"/>
-                      </grid>
+                      <grid row="1" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties/>
                   </component>
@@ -301,9 +325,49 @@
                       <text value="Threshold Method"/>
                     </properties>
                   </component>
+                  <component id="bdf04" class="javax.swing.JCheckBox" binding="showBinaryMaskCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Show binary mask"/>
+                    </properties>
+                  </component>
+                  <component id="649cc" class="javax.swing.JComboBox" binding="threshMethodsCombo" custom-create="true">
+                    <constraints>
+                      <grid row="0" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                        <preferred-size width="150" height="-1"/>
+                      </grid>
+                    </constraints>
+                    <properties/>
+                  </component>
+                  <component id="96797" class="javax.swing.JCheckBox" binding="useWatershedCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Use watershed"/>
+                    </properties>
+                  </component>
+                  <component id="6dca2" class="javax.swing.JCheckBox" binding="saveThresholdROIsCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="3" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save threshold ROIs"/>
+                    </properties>
+                  </component>
+                  <component id="8f4af" class="javax.swing.JCheckBox" binding="saveBinaryMaskCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="3" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save segmentation mask"/>
+                    </properties>
+                  </component>
                 </children>
               </grid>
-              <component id="570f6" class="javax.swing.JCheckBox" binding="findMaximaCheckBox" default-binding="true">
+              <component id="570f6" class="javax.swing.JCheckBox" binding="useFindMaximaCheckBox">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -312,7 +376,7 @@
                   <text value="Find maxima"/>
                 </properties>
               </component>
-              <component id="6c5de" class="javax.swing.JCheckBox" binding="thresholdCheckBox" default-binding="true">
+              <component id="6c5de" class="javax.swing.JCheckBox" binding="useThresholdCheckBox">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -325,7 +389,7 @@
           </grid>
         </children>
       </grid>
-      <component id="5694f" class="javax.swing.JTextField" binding="proteinChannelField">
+      <component id="5694f" class="javax.swing.JTextField" binding="spotChannelField">
         <constraints>
           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="150" height="-1"/>
@@ -335,7 +399,7 @@
           <text value=""/>
         </properties>
       </component>
-      <component id="b064c" class="javax.swing.JLabel" binding="proteinChannelLabel">
+      <component id="b064c" class="javax.swing.JLabel" binding="spotChannelLabel">
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>

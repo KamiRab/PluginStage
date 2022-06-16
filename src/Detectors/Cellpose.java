@@ -22,8 +22,8 @@ import java.util.stream.IntStream;
  * It is used to launch cellpose in command line.
  * All parameters are set by default other than the method and diameter and channels to use
  * TODO modify for cytoplasm detection
- * TODO exclude on edges
  * TODO compatibility cellpose2 (new model)
+ * TODO essayer cellpose sur foci
  */
 public class Cellpose {
     private final ImagePlus imagePlus;
@@ -33,22 +33,29 @@ public class Cellpose {
     private final int cytoChannel;
     private final boolean excludeOnEdges;
     private ImagePlus cellposeOutput;
-    public Cellpose(ImagePlus imagePlus, int minSizeNucleus, String model, int nuclei_channel,int cyto_channel, boolean excludeOnEdges){
+    private RoiManager cellposeRoiManager;
+
+    public Cellpose(ImagePlus imagePlus, int minSizeNucleus, String model, int cytoChannel, int nuclei_channel, boolean excludeOnEdges){
         this.imagePlus=imagePlus;
         this.minSizeNucleus = minSizeNucleus;
         this.model = model;
         this.nucleiChannel=nuclei_channel;
-        this.cytoChannel=cyto_channel;
+        this.cytoChannel=cytoChannel;
         this.excludeOnEdges = excludeOnEdges;
     }
 
-    public Cellpose(ImagePlus imagePlus,int minSizeNucleus, String model,boolean excludeOnEdges){
-        this(imagePlus,minSizeNucleus,model,0,0,excludeOnEdges);
+    public Cellpose(ImagePlus imagePlus, int minSizeNucleus, String model, boolean excludeOnEdges){
+        this(imagePlus,minSizeNucleus,model,0,0, excludeOnEdges);
     }
 
     public ImagePlus getCellposeOutput(){
         return cellposeOutput;
     }
+
+    public RoiManager getCellposeRoiManager() {
+        return cellposeRoiManager;
+    }
+
     public void analysis(){
         DefaultCellposeTask cellposeTask = new DefaultCellposeTask();
 
@@ -67,21 +74,28 @@ public class Cellpose {
 //              Prepare path for additionnal text file created by Cellpose
             File cellpose_outlines_path = new File(cellposeTempDir,imagePlus.getShortTitle()+"_cp_outlines.txt");
 
+            IJ.setDebugMode(true);
             cellposeTask.run();
+            IJ.setDebugMode(false);
 
 //              Open output mask file
-            cellposeOutput = IJ.openImage(cellpose_imp_path.toString());
-//            cellpose_imp.setCalibration(calibration);
+            ImagePlus cellposeAllRois = IJ.openImage(cellpose_imp_path.toString());
+//            Get Rois
+            label2Roi(cellposeAllRois);
+            if (excludeOnEdges){
+                cellposeOutput=Detector.labeledImage(cellposeAllRois.getWidth(),cellposeAllRois.getHeight(),cellposeRoiManager.getRoisAsArray());
+            }else {
+                cellposeOutput = cellposeAllRois;
+            }
             cellposeOutput.setTitle(imagePlus.getShortTitle() + "-cellpose");
-//            cellpose_imp.show();
 
 //            Delete images and temp directory
             boolean imp_delete = cellpose_imp_path.delete();
-            if (!imp_delete) IJ.error(cellpose_imp_path +" could not be deleted");
+            if (!imp_delete) IJ.log(cellpose_imp_path +" could not be deleted");
             boolean outlines_delete = cellpose_outlines_path.delete();
-            if (!outlines_delete) IJ.error(cellpose_outlines_path +" could not be deleted");
+            if (!outlines_delete) IJ.log(cellpose_outlines_path +" could not be deleted");
             boolean tempdirDelete = cellposeTempDir.delete();
-            if (!tempdirDelete) IJ.error("Cellpose temp directory could not be deleted");
+            if (!tempdirDelete) IJ.log("Cellpose temp directory could not be deleted");
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -135,19 +149,20 @@ public class Cellpose {
     /**
      * Based on https://github.com/BIOP/ijp-LaRoMe/blob/master/src/main/java/ch/epfl/biop/ij2command/Labels2Rois.java
      * Simplified for only one frame, one slice and 1 channel
-     * @return RoiManager containing all particle Rois
+     * Can exclude on edges
+     * Creates the RoiManager containing all particle Rois
      */
-    public RoiManager label2Roi(){
-        ImageProcessor ip = cellposeOutput.getProcessor();
-        Wand wand = new Wand(ip);
+    public void label2Roi(ImagePlus cellposeIP){
+        ImageProcessor cellposeProc = cellposeIP.getProcessor();
+        Wand wand = new Wand(cellposeProc);
 
 //        Set RoiManager
-        RoiManager rm = RoiManager.getRoiManager();
-        rm.reset();
+        cellposeRoiManager = RoiManager.getRoiManager();
+        cellposeRoiManager.reset();
 
 //        Create range list
-        int width = cellposeOutput.getWidth();
-        int height = cellposeOutput.getHeight();
+        int width = cellposeProc.getWidth();
+        int height = cellposeProc.getHeight();
 
         int[] pixel_width = new int[ width ];
         int[] pixel_height = new int[ height ];
@@ -162,11 +177,11 @@ public class Cellpose {
          */
 
         // will "erase" found ROI by setting them to 0
-        ip.setColor(0);
+        cellposeProc.setColor(0);
 
         for ( int y_coord : pixel_height) {
             for ( int x_coord : pixel_width) {
-                if ( ip.getPixel( x_coord, y_coord ) > 0.0 ){
+                if ( cellposeProc.getPixel( x_coord, y_coord ) > 0.0 ){
                     // use the magic wand at this coordinate
                     wand.autoOutline( x_coord, y_coord );
 
@@ -174,34 +189,39 @@ public class Cellpose {
                     if ( wand.npoints > 0 ) {
                         // get the Polygon, fill with 0 and add to the manager
                         Roi roi = new PolygonRoi(wand.xpoints, wand.ypoints, wand.npoints, Roi.TRACED_ROI);
-                        roi.setPosition( cellposeOutput.getCurrentSlice() );
+                        roi.setPosition( cellposeIP.getCurrentSlice() );
                         // ip.fill should use roi, otherwise make a rectangle that erases surrounding pixels
-                        ip.fill(roi);
+                        cellposeProc.fill(roi);
                         if (excludeOnEdges){
                             Rectangle r = roi.getBounds();
-                            if (r.x ==0||r.y==0||r.x+r.width==ip.getWidth()||r.y+r.height==ip.getHeight()){
+                            if (r.x ==0||r.y==0||r.x+r.width==cellposeProc.getWidth()||r.y+r.height==cellposeProc.getHeight()){
                                 continue;
                             }
                         }
-                        rm.addRoi( roi );
+                        cellposeRoiManager.addRoi( roi );
                     }
                 }
             }
         }
-        rm.runCommand( cellposeOutput , "Show All" );
-
-        return rm;
+        cellposeRoiManager.runCommand( cellposeIP , "Show All" );
     }
 
+    /**
+     * Tests
+     * @param args
+     */
     public static void main(String[] args) {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
         Detector detector = new Detector(DAPI,"Nucleus",new MeasureCalibration());
         detector.setzStackParameters("Maximum projection",0,DAPI.getNSlices());
-        Cellpose cellpose = new Cellpose(detector.getImage(),200,"cyto2",true);
+        Cellpose cellpose = new Cellpose(detector.getImage(),200,"cyto2", false);
         cellpose.analysis();
         detector.getImage().show();
-        cellpose.label2Roi().show();
-        cellpose.getCellposeOutput().show();
+        cellpose.getCellposeRoiManager().toFront();
+        ImagePlus cellposeOutput = cellpose.getCellposeOutput();
+        cellposeOutput.show();
+        cellposeOutput.setDisplayRange(0,35);
+        cellposeOutput.updateAndDraw();
 
     }
 }

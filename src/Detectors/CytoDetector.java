@@ -3,138 +3,57 @@ package Detectors;
 import Helpers.MeasureCalibration;
 import ij.IJ;
 import ij.ImagePlus;
-import ij.WindowManager;
 import ij.gui.Roi;
-import ij.gui.WaitForUserDialog;
-import ij.measure.ResultsTable;
-import ij.plugin.filter.Analyzer;
-import ij.plugin.frame.RoiManager;
+import ij.process.ImageProcessor;
 
+import java.io.File;
 
-// TODO Cellpose gives entire cell, so for cytoplasm needs to remove nuclei
-// TODO add progress bar
-// TODO create composite image with good channel
-// lien to nucleiPanel
 public class CytoDetector {
-    private final ImagePlus image; /*Original image*/
-    private ImagePlus imageToMeasure; /*Projected or not image, that will be the one measured*/
-    private ImagePlus imageToAnalyze; /*Binary mask that particle analyzer use to count and return the ROIs*/
-    private final String name_experiment; /*Name of experiment (common with spot images)*/
-    private final Detector detector; /*Helper class that do the projection, thresholding and particle analyzer that are common with the spots*/
-    private final String resultsDirectory; /*Directory to save results if necessary*/
-    private final boolean showImage; /*Display or not the images (projection and binary)*/
-    private boolean deeplearning; /*use deeplearning, if false use thresholding*/
-    private int minSizeDLNuclei;
-    private String dLMethod;
-    private boolean useWatershed; /*TODO*/
+
     private Roi[] nucleiRois;
-    private Analyzer analyzer;
-    private RoiManager roiManagerNuclei;
-    private ResultsTable rawMesures;
-    private boolean finalValidation;
-    private boolean useMacro;
-    private String macroText;
-    private boolean excludeOnEdges;
+    private ImagePlus cellLabeledImage;
+    private String nameExperiment;
+    private MeasureCalibration measureCalibration;
+    private String resultsDir;
+    private boolean showImage;
 
-    /**
-     * Constructor with basic parameters, the other are initialized only if needed
-     * @param image image to analyze
-     * @param name_experiment name without channel
-     * @param measureCalibration : calibration to use for ResultTable
-     * @param resultsDir : directory for saving results
-     * @param showImage : display or not of the images
-     */
-    public CytoDetector(ImagePlus image, String name_experiment, MeasureCalibration measureCalibration, String resultsDir, boolean showImage) {
-        this.image = image;
-        this.resultsDirectory =resultsDir;
-        this.showImage=showImage;
-        if (name_experiment.endsWith("_")){
-            this.name_experiment = name_experiment.substring(0,name_experiment.length()-1);
-        }else {
-            this.name_experiment=name_experiment;
+    public CytoDetector(ImagePlus cellLabeledImage, Roi[] nucleiRois, String nameExperiment, MeasureCalibration measureCalibration, String resultsDir, boolean showImage) {
+        this.nucleiRois = nucleiRois;
+        this.cellLabeledImage = cellLabeledImage;
+        this.nameExperiment = nameExperiment;
+        this.measureCalibration = measureCalibration;
+        this.resultsDir = resultsDir;
+        this.showImage = showImage;
+    }
+
+    public boolean prepare(){
+        ImagePlus cellImage = cellLabeledImage.duplicate();
+        ImageProcessor cellProc = cellImage.getProcessor();
+        cellProc.setColor(0);
+        for (Roi nucleiRoi : nucleiRois){
+            cellProc.fill(nucleiRoi);
         }
-        detector = new Detector(image, "Cytoplasm", measureCalibration); /*TODO cell or cytoplasm ?*/
+        cellImage.show();
+        return false;
     }
 
-    /**
-     * Set all parameters for projection if necessary
-     * @param zStackProj Method of projection
-     * @param zStackFirstSlice First slice of stack to use
-     * @param zStackLastSlice Last slice of stack to use
-     */
-    public void setzStackParameters(String zStackProj, int zStackFirstSlice,int zStackLastSlice){
-        detector.setzStackParameters(zStackProj,zStackFirstSlice,zStackLastSlice);
-    }
+//    TODO soustrait image noyau a cell avec NAN quand noyau
+//    TODO
 
-    /**
-     * Set projection method and the slices to use with default values (1 and last slice)
-     * @param zStackProj Method of projection
-     */
-    public void setzStackParameters(String zStackProj) {
-        setzStackParameters(zStackProj, 1, image.getNSlices());
-    }
-
-    /**
-     * Set parameters for macro if necessary
-     * @param macroText : macro text to use
-     */
-    public void setPreprocessingMacro(String macroText){
-        this.useMacro = true;
-        this.macroText = macroText;
-    }
-
-    /**
-     * TODO
-     * @param minSizeDLNuclei
-     * @param dlMethod
-     * @param excludeOnEdges
-     */
-    public void setDeeplearning(int minSizeDLNuclei, String dlMethod, boolean excludeOnEdges) {
-        this.deeplearning = true;
-        this.minSizeDLNuclei = minSizeDLNuclei;
-        this.dLMethod = dlMethod;
-        this.excludeOnEdges = excludeOnEdges;
-    }
-
-    public void preview(){
-        ImagePlus preprocessed = getPreprocessing();
-        if (preprocessed!=null){
-            preprocessed.show();
-//            launch cellpose command to obtain mask
-                /*cyto channel = 0 for gray*/
-                /*nuclei channel = 0 for none*/
-            Cellpose cellpose = new Cellpose(preprocessed,minSizeDLNuclei,dLMethod,excludeOnEdges);
-            cellpose.analysis();
-            cellpose.getCellposeOutput().show();
-            IJ.log("finished");
-            new WaitForUserDialog("Preview is done").show();
-        }
-        int[] ids = WindowManager.getIDList();
-        for (int id : ids) {
-            ImagePlus image = WindowManager.getImage(id);
-            image.changes = false;
-            image.close();
-        }
-    }
-
-    private ImagePlus getPreprocessing() {
-        if (detector.getImage()!=null){
-            IJ.run("Options...","iterations=1 count=1 black");
-//        PROJECTION : convert stack to one image
-            this.imageToMeasure = detector.getImage(); /*detector class does the projection if needed*/
-            if (showImage){
-                this.imageToMeasure.show(); /*show image that will be measured*/
-            }
-//      MACRO : apply custom commands of user
-            if (useMacro){
-                IJ.selectWindow(imageToMeasure.getID());
-                IJ.runMacro("setBatchMode(true);"+macroText+"setBatchMode(false);");
-                imageToMeasure = WindowManager.getCurrentImage();
-//            imageToMeasure.show();
-            }
-//         MEDIAN FILTER : reduce noise
-            //        new RankFilters().rank(filteredProjection.getProcessor(),5,RankFilters.MEDIAN);
-            return imageToMeasure.duplicate();
-        }else return null;
+    public static void main(String[] args) {
+        ImagePlus cytoImage = IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 2_Foci_Cytoplasme\\Images\\Cell_02_w21 FITC.TIF");
+        new File("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Results\\Images").mkdirs();
+        new File("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Results\\ROI").mkdirs();
+        CellDetector cellDetector = new CellDetector(cytoImage, "test", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022", true);
+        cellDetector.setzStackParameters("Maximum projection");
+        cellDetector.setDeeplearning(200, "cyto2", true,true);
+        ImagePlus DAPI = IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 2_Foci_Cytoplasme\\Images\\Cell_02_w31 DAPI 405.TIF");
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022", true);
+        nucleiDetector.setzStackParameters("Maximum projection");
+        nucleiDetector.setDeeplearning(100,"cyto2",true,true);
+        nucleiDetector.prepare();
+        cellDetector.setNucleiDetector(nucleiDetector);
+        cellDetector.prepare();
+        new CytoDetector(cellDetector.getCellposeOutput(),nucleiDetector.getRoiArray(),"test",new MeasureCalibration(),"C:\\Users\\Camille\\Downloads\\Camille_Stage2022",true).prepare();
     }
 }

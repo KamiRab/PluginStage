@@ -7,6 +7,7 @@ import ij.gui.NewImage;
 import ij.gui.Roi;
 import ij.measure.ResultsTable;
 import ij.plugin.ZProjector;
+import ij.plugin.filter.EDM;
 import ij.plugin.filter.ParticleAnalyzer;
 import ij.plugin.frame.RoiManager;
 import ij.process.ImageProcessor;
@@ -23,7 +24,7 @@ import static ij.IJ.d2s;
 public class Detector {
     private ImagePlus image;
     private final String name_image;
-    private final String name_object;
+    private String name_object;
     private final MeasureCalibration measureCalibration;
 
     //Projection parameters
@@ -45,7 +46,7 @@ public class Detector {
      * @param measureCalibration : Helpers.Calibration to use
      */
     public Detector(ImagePlus image, String name_object, MeasureCalibration measureCalibration) {
-        this.image = image;
+        this.image = image.duplicate();
         this.name_image = image.getTitle();
         this.name_object=name_object;
         this.measureCalibration = measureCalibration;
@@ -79,6 +80,13 @@ public class Detector {
         this.minSizeParticle = minSizeParticle;
     }
 
+    /**
+     *  For spots to distinguish between regions
+     * @param type : nuclei, cell or cytoplasm
+     */
+    public void setLocalisation(String type){
+        this.name_object = type + "_"+this.name_object;
+    }
 //    GETTER
 
     public ImagePlus getImage() {
@@ -103,11 +111,13 @@ public class Detector {
             } else {
                 this.image = ZProjector.run(image, "sd", zStackFirstSlice, zStackLastSlice); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
             }
-            rename_image(this.image,"projection");
+            renameImage(this.image,"projection");
+//            IJ.log("The z-projection for "+ this.name_image + " is done.");
         } else {
             IJ.log("The image "+ this.image+" is not a stack.");
         }
     }
+
 
     /**
      * Analyze the binary image to detect particles (here spots or nuclei)
@@ -149,9 +159,6 @@ public class Detector {
     public ImagePlus getThresholdMask(ImagePlus image) {
 //        GET IMAGE TO THRESHOLD
         ImagePlus threshold_IP= image.duplicate();
-        if (threshold_IP.isInvertedLut()){
-            IJ.log("base");
-        }
         ImageProcessor threshold_proc = threshold_IP.getProcessor(); /*get processor*/
 
 //        DEFINE THRESHOLD VALUES THROUGH METHOD GIVEN
@@ -169,11 +176,11 @@ public class Detector {
 //        Analyze
         ParticleAnalyzer.setRoiManager(roiManager);
         ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(analyzer_option,0,null,minSizeParticle,Integer.MAX_VALUE);
-        particleAnalyzer.analyze(threshold_IP);
+        particleAnalyzer.analyze(threshold_IP); /*TODO throws array out of bound index*/
         thresholdRois = roiManager.getRoisAsArray();
 //        Get binary mask output and renames it
         ImagePlus mask_IP= binaryImage();
-        rename_image(mask_IP,"binary_mask");
+        renameImage(mask_IP,"binary_mask");
         return mask_IP;
     }
 
@@ -181,27 +188,55 @@ public class Detector {
      * Uses the ROIs found in getThresholdMask (thresholdRois)
      * @return ImagePlus with an intensity per particle
      */
-    public ImagePlus labeledImage(){
+    public ImagePlus labeledImage(Roi[] rois){
         ImagePlus ip = NewImage.createShortImage("labeledImage",image.getWidth(),image.getHeight(),1,NewImage.FILL_BLACK);
-        for (int i = 0; i < thresholdRois.length; i++) {
+        for (int i = 0; i < rois.length; i++) {
             ip.getProcessor().setColor(i+1);
-            ip.getProcessor().fill(thresholdRois[i]);
+            ip.getProcessor().fill(rois[i]);
         }
-        rename_image(ip,"labeled_mask");
+        renameImage(ip,"labeled_mask");
         return ip;
     }
 
     /**
-     * Uses the
+     * Do the same as the previous labeledImage, but without renaming the image and in static.
+     * @param imageHeight
+     * @param imageWidth
+     * @param rois
      * @return
      */
-    private ImagePlus binaryImage(){
-        ImagePlus ip = NewImage.createByteImage("binaryMask",image.getWidth(),image.getHeight(),1,NewImage.FILL_BLACK);
-        for (int i = 0; i < thresholdRois.length; i++) {
-            ip.getProcessor().setColor(255);
-            ip.getProcessor().fill(thresholdRois[i]);
+    public static ImagePlus labeledImage(int imageWidth,int imageHeight, Roi[] rois){
+        ImagePlus imagePlus = NewImage.createShortImage("labeledImage",imageWidth,imageHeight,1,NewImage.FILL_BLACK);
+        for (int i = 0; i < rois.length; i++) {
+            imagePlus.getProcessor().setColor(i+1);
+            imagePlus.getProcessor().fill(rois[i]);
         }
-        return ip;
+        return imagePlus;
+    }
+
+    /**
+     * Uses the ROIs detected to create binary image (with same dimension)
+     * @return Binary image
+     */
+    private ImagePlus binaryImage(){
+        ImagePlus binaryMask = NewImage.createByteImage("binaryMask",image.getWidth(),image.getHeight(),1,NewImage.FILL_BLACK);
+        for (Roi rois : thresholdRois) {
+            binaryMask.getProcessor().setColor(255);
+            binaryMask.getProcessor().fill(rois);
+        }
+        return binaryMask;
+    }
+
+    /**
+     *
+     * @param binary_threshold_proc : processor of mask, already ByteProcessor
+     * @return ImagePlus corresponding to watersheded binary image
+     */
+    public ImagePlus getWatershed(ImageProcessor binary_threshold_proc) {
+//        ByteProcessor binary_threshold_proc = threshold_proc.convertToByteProcessor();
+        EDM edm = new EDM();
+        edm.toWatershed(binary_threshold_proc);
+        return new ImagePlus(image.getTitle()+"_watershed",binary_threshold_proc);
     }
 
     /**
@@ -219,7 +254,7 @@ public class Detector {
      * @param imageToRename : ImagePlus that will be renamed
      * @param toAdd : suffix to add
      */
-    public void rename_image (ImagePlus imageToRename, String toAdd){
+    public void renameImage(ImagePlus imageToRename, String toAdd){
         int lastPoint = name_image.lastIndexOf("."); /*get position of last point*/
         String getTitleWOExtension;
         String extension;
@@ -231,6 +266,7 @@ public class Detector {
             imageToRename.setTitle(name_image+"_"+toAdd);
         }
     }
+
 
     /**
      * Add results from a ResultTable to another for clearer headings and adding of calibrated area.
@@ -281,7 +317,7 @@ public class Detector {
             }
         }
         /*Arithmetic mean*/
-        customMeasures.addValue(name_object+ " Mean",d2s(sum(rawMeasures.getColumn("RawIntDen"))/sum(rawMeasures.getColumn("Area"))));
+        customMeasures.addValue(name_object+ " threshold Mean",d2s(sum(rawMeasures.getColumn("RawIntDen"))/sum(rawMeasures.getColumn("Area"))));
     }
 
     /**
