@@ -14,6 +14,9 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ItemEvent;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 
@@ -79,7 +82,7 @@ public class CytoCellPanel {
                 imageListModel.addElement(ip);
             }
             imageList.setSelectedIndex(0);
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         }
 
         isAZStackCheckBox.addItemListener(e -> zStackParameters.setVisible(e.getStateChange() == ItemEvent.SELECTED));
@@ -114,7 +117,7 @@ public class CytoCellPanel {
         });
         imageEndingField.addActionListener(e -> {
             imageEndingField.setText(imageEndingField.getText().trim());
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         });
     }
 
@@ -185,12 +188,40 @@ public class CytoCellPanel {
             IJ.error("No images given for nuclei. Please verify the image ending corresponds to at least an image.");
             return null;
         } else {
+            addParametersToFile();
             for (int i = 0; i < imageListModel.getSize(); i++) {
                 image = imageListModel.getElementAt(i);
                 nameExperiment = getNameExperiment(image);
                 cyto.add(getCytoDetector(image, nameExperiment, false));
             }
             return cyto;
+        }
+    }
+
+    private void addParametersToFile() {
+        String directory = imageListModel.getElementAt(0).getDirectory();
+        if (directory != null) {
+            String parameterFilename = directory + "/Results/Parameters.txt";
+            try {
+                FileWriter fileWriter = new FileWriter(parameterFilename, true);
+                BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+                if (nucleiPanel!=null){
+                    bufferedWriter.append("\nCell/Cytoplasm PARAMETERS:");
+                }else {
+                    bufferedWriter.append("\nCell PARAMETERS:");
+                }
+                if (useAMacroCheckBox.isSelected()) {
+                    bufferedWriter.append("\nMacro used:\n").append(macroArea.getText());
+                }
+                bufferedWriter.append("\nUse of cellpose: ");
+                bufferedWriter.append("\nCellpose model: ").append(cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()));
+                bufferedWriter.append("\nCellpose cell diameter: ").append(String.valueOf(cellPoseMinDiameterSpinner.getValue()));
+                bufferedWriter.append("\nCellpose excludeOnEdges: ").append(cellPoseExcludeOnEdgesCheckBox.isSelected() ? "yes" : "no");
+                bufferedWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                IJ.log("The parameters could not be written.");
+            }
         }
     }
 

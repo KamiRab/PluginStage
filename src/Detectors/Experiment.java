@@ -132,7 +132,8 @@ public class Experiment {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
         NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003"/*,false*/, new MeasureCalibration("idk", "0.103", "um²"), "C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", true);
         nucleiDetector.setzStackParameters("Maximum projection");
-        nucleiDetector.setThresholdMethod("Li", 1000, false, true, false,true);
+        nucleiDetector.setSegmentation(false,true);
+        nucleiDetector.setThresholdMethod("Li", 1000, false, true);
         ArrayList<SpotDetector> spotDetectorArrayList = new ArrayList<>();
         ImagePlus protein1 = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
         SpotDetector spotDetector1 = new SpotDetector(protein1, "CY5", "WT_HU_Ac-2re--cell003", new MeasureCalibration("idk", "0.103", "um²"), "C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);

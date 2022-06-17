@@ -151,6 +151,7 @@ public class Detector {
         return roiManager;
     }
 
+//    TODO add use watershed in parameters
     /**
      * Creates a binary image to differentiate the objects to analyze
      * @param image : image to threshold

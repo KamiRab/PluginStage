@@ -186,10 +186,10 @@ public class SpotDetector {
                     thresholdIP.show();
                 }
                 if (resultsDirectory != null && saveThresholdImage){
-                    if (IJ.saveAsTiff(thresholdIP, resultsDirectory +"\\Results\\Images\\"+thresholdIP.getTitle())){
-                        IJ.log("The spot binary mask "+thresholdIP.getTitle() + " was saved in "+ resultsDirectory+"\\Results\\Images\\");
+                    if (IJ.saveAsTiff(thresholdIP, resultsDirectory +"/Results/Images/"+thresholdIP.getTitle())){
+                        IJ.log("The spot binary mask "+thresholdIP.getTitle() + " was saved in "+ resultsDirectory+"/Results/Images/");
                     }else {
-                        IJ.log("The spot binary mask "+thresholdIP.getTitle() + " could not be saved in  "+ resultsDirectory+"\\Results\\Images\\");
+                        IJ.log("The spot binary mask "+thresholdIP.getTitle() + " could not be saved in  "+ resultsDirectory+"/Results/Images/");
                     }
                 }
             }
@@ -201,25 +201,25 @@ public class SpotDetector {
                         findMaximaIP.setRoi((Roi)null);
                         PointRoi roiMaxima = findMaxima(findMaximaIP);
                         findMaximaIP.setRoi(roiMaxima);
-                        boolean wasSaved = RoiEncoder.save(roiMaxima, resultsDirectory +"\\Results\\ROI\\" + image.getShortTitle() + "findMaxima_all_roi.roi");
+                        boolean wasSaved = RoiEncoder.save(roiMaxima, resultsDirectory +"/Results/ROI/" + image.getShortTitle() + "findMaxima_all_roi.roi");
                         if (!wasSaved) {
                             IJ.error("Could not save ROIs");
                         }else {
-                            IJ.log("The ROIs of the spot found by find Maxima method of "+image.getTitle() + " were saved in "+ resultsDirectory+"\\Results\\ROI\\" + image.getShortTitle() + "findMaxima_all_roi.roi");
+                            IJ.log("The ROIs of the spot found by find Maxima method of "+image.getTitle() + " were saved in "+ resultsDirectory+"/Results/ROI/" + image.getShortTitle() + "findMaxima_all_roi.roi");
                         }
                     }
                     if (saveMaximaImage){
                         ImagePlus toSave = findMaximaIP.flatten();
-                        if(IJ.saveAsTiff(toSave, resultsDirectory +"\\Results\\Images\\"+findMaximaIP.getTitle())){
-                            IJ.log("The find maxima spots image "+findMaximaIP.getTitle() + " was saved in "+ resultsDirectory+"\\Results\\Images\\"+findMaximaIP.getTitle());
+                        if(IJ.saveAsTiff(toSave, resultsDirectory +"/Results/Images/"+findMaximaIP.getTitle())){
+                            IJ.log("The find maxima spots image "+findMaximaIP.getTitle() + " was saved in "+ resultsDirectory+"/Results/Images/"+findMaximaIP.getTitle());
                         } else {
-                            IJ.log("The find maxima spots image "+findMaximaIP.getTitle() + " could not be saved in "+ resultsDirectory+"\\Results\\Images\\");
+                            IJ.log("The find maxima spots image "+findMaximaIP.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/Images/");
                         }
                     }
                 }
             }
             if (resultsDirectory!=null){
-                String parameterFilename = resultsDirectory+"\\Results\\Parameters.txt";
+                String parameterFilename = resultsDirectory+"/Results/Parameters.txt";
                 try {
                     FileWriter fileWriter = new FileWriter(parameterFilename,true);
                     BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
@@ -266,10 +266,10 @@ public class SpotDetector {
         thresholdIP.getProcessor().invertLut();
         roiManagerFoci = detector.analyzeParticles(thresholdIP);
         if (resultsDirectory!=null&&saveThresholdRois){
-            if (roiManagerFoci.save(resultsDirectory +"\\Results\\ROI\\"+ image.getShortTitle() + "_threshold_"+type +(region+1)+"_roi.zip")){
-                IJ.log("The ROIs of the "+type + " "+(region+1)+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"\\Results\\ROIs\\");
+            if (roiManagerFoci.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + "_threshold_"+type +(region+1)+"_roi.zip")){
+                IJ.log("The ROIs of the "+type + " "+(region+1)+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"/Results/ROIs/");
             }else {
-                IJ.log("The ROIs of the "+type + " "+ (region+1)+" of the image "+image.getTitle() + " by threshold method could not be saved in "+ resultsDirectory+"\\Results\\ROIs\\");
+                IJ.log("The ROIs of the "+type + " "+ (region+1)+" of the image "+image.getTitle() + " by threshold method could not be saved in "+ resultsDirectory+"/Results/ROIs/");
             }
         }
         int numberSpot = roiManagerFoci.getCount();
@@ -351,13 +351,14 @@ public class SpotDetector {
 
     public static void main(String[] args) {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", /*false,*/ new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022",true);
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", /*false,*/ new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022",true);
         nucleiDetector.setzStackParameters("Maximum projection");
-        nucleiDetector.setThresholdMethod("Li", 1000, false, true, false,true);
+        nucleiDetector.setSegmentation(false,true);
+        nucleiDetector.setThresholdMethod("Li", 1000, false, true);
         nucleiDetector.prepare();
 
         ImagePlus protein = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        SpotDetector spotDetector = new SpotDetector(protein, "CY5", "WT_HU_Ac-2re--cell003", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022",true);
+        SpotDetector spotDetector = new SpotDetector(protein, "CY5", "WT_HU_Ac-2re--cell003", new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022",true);
         spotDetector.setRollingBallSize(10);
         spotDetector.setzStackParameters("Maximum projection");
 //        spotDetector.setSpotByfindMaxima(1000);

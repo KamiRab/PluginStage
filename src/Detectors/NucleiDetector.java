@@ -35,8 +35,6 @@ public class NucleiDetector {
     private boolean useMacro;
     private String macroText;
     private boolean excludeOnEdges;
-    private String thresholdMethod;
-    private double minSizeThrNucleus;
     private boolean saveMask;
     private boolean saveRois;
     private boolean showBinaryImage;
@@ -101,33 +99,39 @@ public class NucleiDetector {
 
     /**
      * Set parameters for thresholding and
-     * @param thresholdMethod method of thresholding
-     * @param minSizeNucleus minimum size of particle to consider
-     * @param useWatershed if true, use watershed method in addition to thresholding
-     * @param excludeOnEdges if true, exclude particles on edge of image
+     * @param thresholdMethod : method of thresholding
+     * @param minSizeNucleus : minimum size of particle to consider
+     * @param useWatershed : if true, use watershed method in addition to thresholding
+     * @param excludeOnEdges : if true, exclude particles on edge of image
+
      */
-    public void setThresholdMethod(String thresholdMethod,double minSizeNucleus,boolean useWatershed,boolean excludeOnEdges,boolean finalValidation, boolean showBinaryImage) {
+    public void setThresholdMethod(String thresholdMethod,double minSizeNucleus,boolean useWatershed,boolean excludeOnEdges) {
         this.deeplearning = false;
-        this.thresholdMethod = thresholdMethod;
-        this.minSizeThrNucleus = minSizeNucleus;
-        this.excludeOnEdges = excludeOnEdges;
         detector.setThresholdParameters(thresholdMethod,excludeOnEdges,minSizeNucleus);
         this.useWatershed = useWatershed;
-        this.finalValidation = finalValidation;
-        this.showBinaryImage = showBinaryImage;
+        this.excludeOnEdges = excludeOnEdges;
     }
 
     /**
-     * TODO
-     * @param minSizeDLNuclei
-     * @param dlMethod
-     * @param excludeOnEdges
+     *
+     * @param minSizeDLNuclei : minimum size of nucleus to detect
+     * @param cellposeModel : model used by cellpose to segment
+     * @param excludeOnEdges : exclude nuclei on image edges
      */
-    public void setDeeplearning(int minSizeDLNuclei, String dlMethod,boolean excludeOnEdges, boolean showBinaryImage) {
+    public void setDeeplearning(int minSizeDLNuclei, String cellposeModel,boolean excludeOnEdges) {
         this.deeplearning = true;
         this.minSizeDLNuclei = minSizeDLNuclei;
-        this.cellposeModel = dlMethod;
+        this.cellposeModel = cellposeModel;
         this.excludeOnEdges = excludeOnEdges;
+    }
+
+    /**
+     * Set common parameters for cellpose and threshold method
+     * @param finalValidation : let the user redefine the ROI found automatically
+     * @param showBinaryImage : show result image if true
+     */
+    public void setSegmentation(boolean finalValidation, boolean showBinaryImage){
+        this.finalValidation = finalValidation;
         this.showBinaryImage = showBinaryImage;
     }
 
@@ -148,6 +152,13 @@ public class NucleiDetector {
     }
 
 //    TODO commentaire avec différentes étapes de l'algo
+
+    /**
+     * Preview of segmentation
+     * - does the preprocessing:
+     * - either by threshold or by cellpose
+     * - show result labeled image
+     */
     public void preview(){
         int[] idsToKeep = WindowManager.getIDList();
         ImagePlus preprocessed = getPreprocessing();
@@ -170,101 +181,96 @@ public class NucleiDetector {
         }
     }
 
+    /**
+     * Prepare for measurement
+     * - does the preprocessing
+     * - if selected by user show preprocessing image
+     * - segment image
+     * - if selected by user, the user can delete/modify ROIs
+     * - if selected by user show segmentation image
+     * - if selected by user save segmentation image and ROIs
+     * @return true if no error
+     */
     public boolean prepare(){
+//        PREPROCESSING
         ImagePlus preprocessed = getPreprocessing();
-        if (preprocessed!=null){
+        if (preprocessed!=null){ /*if no error during preprocessing*/
             RoiManager roiManagerNuclei;
+            ImagePlus labeledImage;
+//            SEGMENTATION
             if (deeplearning){
                 Cellpose cellpose = new Cellpose(preprocessed,minSizeDLNuclei, cellposeModel, excludeOnEdges);
                 cellpose.analysis();
-                ImagePlus cellposeOutput = cellpose.getCellposeOutput();
-                detector.renameImage(cellposeOutput,"cellpose");
+                labeledImage = cellpose.getCellposeOutput();
+                detector.renameImage(labeledImage,"cellpose");
                 if (showBinaryImage)  cellpose.getCellposeOutput().show();
-                if (resultsDirectory!=null && saveMask){
-                    if (IJ.saveAsTiff(cellposeOutput, resultsDirectory +"\\Results\\Images\\"+cellposeOutput.getTitle())){
-                        IJ.log("The binary mask "+cellpose.getCellposeOutput().getTitle() + " was saved in "+ resultsDirectory+"\\Results\\Images\\");
-                    }else {
-                        IJ.log("The binary mask "+cellpose.getCellposeOutput().getTitle() + " could not be saved in "+ resultsDirectory+"\\Results\\Images\\");
-                    }
-                }else if (resultsDirectory==null){
-                    IJ.error("No directory given for the results");
-                }
                 roiManagerNuclei =cellpose.getCellposeRoiManager();
-                if (resultsDirectory!=null && saveRois) {
-                    if(roiManagerNuclei.save(resultsDirectory +"\\Results\\ROI\\"+ image.getShortTitle() + "_nucleus_cellpose_roi.zip")){
-                        IJ.log("The nuclei ROIs of "+image.getTitle() + " were saved in "+ resultsDirectory+"\\Results\\ROI\\");
-                    }else {
-                        IJ.log("The nuclei ROIs of "+image.getTitle() + " could not be saved in "+ resultsDirectory+"\\Results\\ROI\\");
-                    }
-                }else if (resultsDirectory==null){
-                    IJ.error("No directory given for the results");
-                }
             } else {
                 thresholding(preprocessed);
-                // Analyse particule
-//            this.resultsTableNuclei = new ResultsTable(); /*creation d'une resultTable pour PA*/
+                // Analyse particle
                 roiManagerNuclei =detector.analyzeParticles(imageToParticleAnalyze);
-                if (finalValidation){
-//                roiManagerNuclei.show(); /*TODO*/
-                    roiManagerNuclei.toFront(); /*TODO to verify*/
-                    if (showBinaryImage){
-                        IJ.selectWindow(imageToMeasure.getID());
-                    }else {
-                        imageToMeasure.show();
-                    }
-                    roiManagerNuclei.runCommand("Show All");
-                    new WaitForUserDialog("Nuclei selection", "Delete nuclei : select the ROIs + delete").show();
-                    if (!showBinaryImage){
-                        imageToMeasure.close();
-                    }
-                }
-                ImagePlus labeledImage = detector.labeledImage(roiManagerNuclei.getRoisAsArray());
-                if (resultsDirectory !=null && saveMask){
-                    if(IJ.saveAsTiff(labeledImage, resultsDirectory +"\\Results\\Images\\"+labeledImage.getTitle())){
-                        IJ.log("The binary mask "+labeledImage.getTitle() + " was saved in "+ resultsDirectory+"\\Results\\Images\\");
-                    } else {
-                        IJ.log("The binary mask "+labeledImage.getTitle() + " could not be saved in "+ resultsDirectory+"\\Results\\Images\\");
-                    }
-                }else if (resultsDirectory==null){
-                    IJ.error("No directory given for the results");
-                }
+                labeledImage = detector.labeledImage(roiManagerNuclei.getRoisAsArray());
+            }
+            if (showBinaryImage){
+                labeledImage.show();
+            }
+//            User can redefine ROIs if option selected
+            if (finalValidation){
+                roiManagerNuclei.toFront(); /*TODO to verify*/
                 if (showBinaryImage){
-                    labeledImage.show();
+                    IJ.selectWindow(imageToMeasure.getID());
+                }else {
+                    imageToMeasure.show();
                 }
+                roiManagerNuclei.runCommand("Show All");
+                new WaitForUserDialog("Nuclei selection", "Delete nuclei : select the ROIs + delete").show();
+                if (!showBinaryImage){
+                    imageToMeasure.close();
+                }
+                labeledImage = detector.labeledImage(roiManagerNuclei.getRoisAsArray());
+            }
+            if (resultsDirectory !=null && saveMask){
+                if(IJ.saveAsTiff(labeledImage, resultsDirectory +"/Results/Images/"+labeledImage.getTitle())){
+                    IJ.log("The segmentation mask "+labeledImage.getTitle() + " was saved in "+ resultsDirectory+"/Results/Images/");
+                } else {
+                    IJ.log("The segmentation mask "+labeledImage.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/Images/");
+                }
+            }else if (resultsDirectory==null){
+                IJ.error("No directory given for the results");
+            }
 
-                if (resultsDirectory!=null && saveRois) {
-                    if(roiManagerNuclei.save(resultsDirectory +"\\Results\\ROI\\"+ image.getShortTitle() + "_nucleus_threshold_roi.zip")){
-                        IJ.log("The nuclei ROIs of "+image.getTitle() + " were saved in "+ resultsDirectory+"\\Results\\ROI\\");
-                    } else {
-                        IJ.log("The nuclei ROIs of "+image.getTitle() + " could not be saved in "+ resultsDirectory+"\\Results\\ROI\\");
-                    }
+            if (resultsDirectory!=null && saveRois) {
+                if(roiManagerNuclei.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + "_nucleus_threshold_roi.zip")){
+                    IJ.log("The nuclei ROIs of "+image.getTitle() + " were saved in "+ resultsDirectory+"/Results/ROI/");
+                } else {
+                    IJ.log("The nuclei ROIs of "+image.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/ROI/");
                 }
-                else if (resultsDirectory==null){
-                    IJ.error("No directory given for the results");
-                }
+            }
+            else if (resultsDirectory==null){
+                IJ.error("No directory given for the results");
             }
             this.rawMesures = new ResultsTable();
             nucleiRois = roiManagerNuclei.getRoisAsArray();
             analyzer = new Analyzer(imageToMeasure, Measurements.MEAN + Measurements.AREA+Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
-            if(image.getProcessor()==null){
-                IJ.error("ip=null at prepare end");
-            }
             return true;
         }else return false;
     }
 
+    /**
+     * Do the measurement for each nucleus and add them to result table
+     * @param nucleus : index of the nucleus to analyze
+     * @param resultsTableFinal : resultTable to fill
+     */
     public void measureEachNuclei(int nucleus,ResultsTable resultsTableFinal) {
         imageToMeasure.setRoi(nucleiRois[nucleus]);
         analyzer.measure();
         detector.setResultsAndRename(rawMesures,resultsTableFinal,nucleus);
     }
 
-
-//    TODO mesureNuclei par ROI ==> besoin de globaliser analyser et results table
-//    TODO Mesure noyau et prot dans meme boucle de Roi
-//    TODO preprocess puis boucle ROI
-
-
+    /**
+     * If useThreshold, prepare threshold image
+     * @param imagePlus
+     */
     public void thresholding(ImagePlus imagePlus){
 //        OBTAIN BINARY MASK OF THRESHOLDED IMAGE
         ImagePlus mask_IP = detector.getThresholdMask(imagePlus);
@@ -321,7 +327,8 @@ public class NucleiDetector {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
         NucleiDetector nucleiDetector = new NucleiDetector(DAPI,"WT_HU_Ac-2re--cell003",new MeasureCalibration(),"C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);
         nucleiDetector.setzStackParameters("Maximum projection");
-        nucleiDetector.setDeeplearning(200,"cyto",true,true);
+        nucleiDetector.setSegmentation(false,true);
+        nucleiDetector.setDeeplearning(200,"cyto",true);
 //        nucleiDetector.setThresholdMethod("Li",1000,false,true,false);
         nucleiDetector.prepare();
     }

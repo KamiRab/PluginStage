@@ -58,19 +58,17 @@ public class MeasureCalibration {
     }
 
 //      GETTER
+    public String getName() {
+    return name;
+}
     public double getPixelLength(){
         return pixelLength;
     }
     public double getPixelArea() {
         return pixelArea;
     }
-
     public String getUnit() {
         return unit;
-    }
-
-    public String getName() {
-        return name;
     }
 
 //      METHODS/FUNCTIONS
@@ -80,7 +78,7 @@ public class MeasureCalibration {
      * @return ArrayList of all calibrations found in file
      */
     public static ArrayList<MeasureCalibration> getCalibrationFromFile(){
-        String calibration_filename = Prefs.getPrefsDir()+"\\IJ_Calibration.txt"; /*get localisation of file*/
+        String calibration_filename = Prefs.getPrefsDir()+"/IJ_Calibration.txt"; /*get localisation of file*/
         ArrayList<MeasureCalibration> measureCalibrations = new ArrayList<>(); /*init ArrayList*/
         try{
             BufferedReader reader = new BufferedReader(new FileReader(calibration_filename));
@@ -119,7 +117,7 @@ public class MeasureCalibration {
      * From a created Calibration instance, adds it to file
      */
     public void addCalibrationToFile(){
-        String calibration_filename = Prefs.getPrefsDir()+"\\IJ_Calibration.txt";
+        String calibration_filename = Prefs.getPrefsDir()+"/IJ_Calibration.txt";
         try {
             BufferedWriter output = new BufferedWriter(new FileWriter(calibration_filename,true));
             output.newLine();
@@ -150,7 +148,7 @@ public class MeasureCalibration {
      * @throws IOException : if file can not be created or written to, getCalibrationFromFile display error message
      */
     public static void createCalibrationFile(boolean alreadyExists) throws IOException {
-        String calibration_filename = Prefs.getPrefsDir()+"\\IJ_Calibration.txt";
+        String calibration_filename = Prefs.getPrefsDir()+"/IJ_Calibration.txt";
         File calibration_file = new File(calibration_filename);
         if (!alreadyExists){
             if (calibration_file.createNewFile()){

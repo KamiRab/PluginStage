@@ -109,7 +109,10 @@ public class OpenImages extends JFrame implements PlugIn {
                 if (path.split("\\\\").length > 2) {
                     String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
                     choosenDirectory.setText("..." + path_shorten);
-                } else {
+                } else if(path.split("/").length>2){
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("/")).lastIndexOf("/"));
+                    choosenDirectory.setText("..." + path_shorten);
+                }else {
                     choosenDirectory.setText(path);
                 }
 
@@ -266,13 +269,13 @@ public class OpenImages extends JFrame implements PlugIn {
 
     public static void main(String[] args) {
         ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-        for (ImagePlus images : imagesToAnalyze
-        ) {
-            images.show();
-        }
+//        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+//        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
+//        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+//        for (ImagePlus images : imagesToAnalyze
+//        ) {
+//            images.show();
+//        }
         OpenImages openImages = new OpenImages();
         openImages.run(null);
     }

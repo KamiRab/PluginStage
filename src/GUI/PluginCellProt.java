@@ -99,11 +99,6 @@ public class PluginCellProt extends JFrame implements PlugIn {
                 resultsDirectoryPanel.setVisible(true);
             }
         }
-        if (saveResultsROIAndCheckBox.isSelected()) {
-            IJ.log("test true");
-        } else {
-            IJ.log("test false");
-        }
         showImagesResultsCheckBox.setSelected(Prefs.get("PluginToName.showResults", true));
 //TODO item listener show image for panel
 
@@ -223,13 +218,13 @@ public class PluginCellProt extends JFrame implements PlugIn {
                             if (!interrupt) {
                                 interrupt = !exp.run();
                                 if (saveResultsROIAndCheckBox.isSelected() || fromDirectory) {
-                                    finalResults.save(ipList[0].getDirectory() + "\\Results\\results.xls");
+                                    finalResults.save(ipList[0].getDirectory() + "/Results/results.xls");
                                 }
                             }
                         }
                         finalResults.deleteRow(finalResults.size() - 1);
                         if (saveResultsROIAndCheckBox.isSelected() || fromDirectory) {
-                            finalResults.save(ipList[0].getDirectory() + "\\Results\\results.xls");
+                            finalResults.save(ipList[0].getDirectory() + "/Results/results.xls");
                         }
                         finalResults.show("Final Results");
                         return null;
@@ -289,7 +284,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         if (!new File(ipList[0].getDirectory()).exists()) {
             ImageToAnalyze.createResultsDirectory(ipList[0].getDirectory());
         }
-        String parameterFilename = ipList[0].getDirectory() + "\\Results\\Parameters.txt";
+        String parameterFilename = ipList[0].getDirectory() + "/Results/Parameters.txt";
         File parametersFile = new File(parameterFilename);
         try {
             if (parametersFile.createNewFile()) {

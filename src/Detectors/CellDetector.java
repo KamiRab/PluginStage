@@ -28,15 +28,14 @@ public class CellDetector {
     private final boolean showPreprocessedImage; /*Display or not the images (projection and binary)*/
     private NucleiDetector nucleiDetector; /*Object associated to nuclei images, */
 
-    private boolean useMacro;
-    private String macroText;
+    private String macroText; /*Macro text if the user wants to treat image*/
     //    Parameters for cellpose
-    private int minSizeCell;
-    private String cellposeModel;
-    private boolean excludeOnEdges;
+    private int minSizeCell; /*minimum size of the cell*/
+    private String cellposeModel; /*model to be used by cellpose*/
+    private boolean excludeOnEdges; /*exclude the cells on the edge*/
 
-    private Analyzer analyzer;
     //    Results
+    private Analyzer analyzer;
     private ImagePlus cellposeOutput;
     private Roi[] cellRois;
     private ResultsTable rawMesures;
@@ -49,22 +48,22 @@ public class CellDetector {
      * Constructor with basic parameters, the other are initialized only if needed
      *
      * @param image              image to analyze
-     * @param name_experiment    name without channel
+     * @param nameExperiment    name without channel
      * @param measureCalibration : calibration to use for ResultTable
      * @param resultsDir         : directory for saving results
      * @param showPreprocessedImage          : display or not of the images
      */
-    public CellDetector(ImagePlus image, String name_experiment, MeasureCalibration measureCalibration, String resultsDir, boolean showPreprocessedImage) {
+    public CellDetector(ImagePlus image, String nameExperiment, MeasureCalibration measureCalibration, String resultsDir, boolean showPreprocessedImage) {
         this.image = image;
         this.resultsDirectory = resultsDir;
 
         this.showPreprocessedImage = showPreprocessedImage;
-        if (name_experiment.endsWith("_")) {
-            this.name_experiment = name_experiment.substring(0, name_experiment.length() - 1);
+        if (nameExperiment.endsWith("_")) {
+            this.name_experiment = nameExperiment.substring(0, nameExperiment.length() - 1);
         } else {
-            this.name_experiment = name_experiment;
+            this.name_experiment = nameExperiment;
         }
-        detector = new Detector(image, "WholeCell", measureCalibration); /*TODO cell or cytoplasm ?*/
+        detector = new Detector(image, "Cell", measureCalibration); /*TODO cell or cytoplasm ?*/
         nucleiDetector = null;
     }
 
@@ -103,7 +102,6 @@ public class CellDetector {
      * @param macroText : macro text to use
      */
     public void setPreprocessingMacro(String macroText) {
-        this.useMacro = true;
         this.macroText = macroText;
     }
 
@@ -117,14 +115,14 @@ public class CellDetector {
         this.saveRois = saveROIs;
     }
     /**
-     * TODO
      *
-     * @param minSizeDLNuclei
-     * @param cellposeModel
-     * @param excludeOnEdges
+     *
+     * @param minSizeDLCell : minimum size of cell to detect
+     * @param cellposeModel : model used by cellpose to segment
+     * @param excludeOnEdges : exclude cell on image edges
      */
-    public void setDeeplearning(int minSizeDLNuclei, String cellposeModel, boolean excludeOnEdges, boolean showBinaryImage) {
-        this.minSizeCell = minSizeDLNuclei;
+    public void setDeeplearning(int minSizeDLCell, String cellposeModel, boolean excludeOnEdges, boolean showBinaryImage) {
+        this.minSizeCell = minSizeDLCell;
         this.cellposeModel = cellposeModel;
         this.excludeOnEdges = excludeOnEdges;
         this.showBinaryImage = showBinaryImage;
@@ -194,18 +192,18 @@ public class CellDetector {
                 cellposeOutput.updateAndDraw();
             }
             if (resultsDirectory != null && saveMask) {
-                if (IJ.saveAsTiff(cellposeOutput, resultsDirectory + "\\Results\\Images\\" + cellposeOutput.getTitle())){
-                    IJ.log("The binary mask " + cellpose.getCellposeOutput().getTitle() + " was saved in " + resultsDirectory + "\\Results\\Images\\");
+                if (IJ.saveAsTiff(cellposeOutput, resultsDirectory + "/Results/Images/" + cellposeOutput.getTitle())){
+                    IJ.log("The binary mask " + cellpose.getCellposeOutput().getTitle() + " was saved in " + resultsDirectory + "/Results/Images/");
                 }else {
-                    IJ.log("The binary mask " + cellpose.getCellposeOutput().getTitle() + " could not be saved in " + resultsDirectory + "\\Results\\Images\\");
+                    IJ.log("The binary mask " + cellpose.getCellposeOutput().getTitle() + " could not be saved in " + resultsDirectory + "/Results/Images/");
                 }
             }
             roiManagerCell = cellpose.getCellposeRoiManager();
             if (resultsDirectory != null && saveRois) {
-                if (roiManagerCell.save(resultsDirectory + "\\Results\\ROI\\" + image.getShortTitle() + "_wholeCell_cellpose_roi.zip")){
-                    IJ.log("The cell ROIs of " + image.getTitle() + " were saved in " + resultsDirectory + "\\Results\\ROI\\");
+                if (roiManagerCell.save(resultsDirectory + "/Results/ROI/" + image.getShortTitle() + "_wholeCell_cellpose_roi.zip")){
+                    IJ.log("The cell ROIs of " + image.getTitle() + " were saved in " + resultsDirectory + "/Results/ROI/");
                 } else {
-                    IJ.log("The cell ROIs of " + image.getTitle() + " could not be saved in " + resultsDirectory + "\\Results\\ROI\\");
+                    IJ.log("The cell ROIs of " + image.getTitle() + " could not be saved in " + resultsDirectory + "/Results/ROI/");
                 }
             }
             this.rawMesures = new ResultsTable();
@@ -228,7 +226,7 @@ public class CellDetector {
                 this.imageToMeasure.show(); /*show image that will be measured*/
             }
 //      MACRO : apply custom commands of user
-            if (useMacro) {
+            if (macroText!=null) {
                 imageToMeasure.show();
                 IJ.selectWindow(imageToMeasure.getID());
                 IJ.runMacro("setBatchMode(true);" + macroText + "setBatchMode(false);");
@@ -290,14 +288,14 @@ public class CellDetector {
      * @param args
      */
     public static void main(String[] args) {
-        ImagePlus cytoImage = IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 2_Foci_Cytoplasme\\Images\\Cell_02_w21 FITC.TIF");
-        new File("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Results\\Images").mkdirs();
-        new File("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Results\\ROI").mkdirs();
-        CellDetector cellDetector = new CellDetector(cytoImage, "test", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022", true);
+        ImagePlus cytoImage = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/Cell_02_w21 FITC.TIF");
+        new File("C:/Users/Camille/Downloads/Camille_Stage2022/Results/Images").mkdirs();
+        new File("C:/Users/Camille/Downloads/Camille_Stage2022/Results/ROI").mkdirs();
+        CellDetector cellDetector = new CellDetector(cytoImage, "test", new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022", true);
         cellDetector.setzStackParameters("Maximum projection");
         cellDetector.setDeeplearning(200, "cyto2", true,true);
-        ImagePlus DAPI = IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 2_Foci_Cytoplasme\\Images\\Cell_02_w31 DAPI 405.TIF");
-        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "test", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022", true);
+        ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/Cell_02_w31 DAPI 405.TIF");
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "test", new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022", true);
         nucleiDetector.setzStackParameters("Maximum projection");
         cellDetector.setNucleiDetector(nucleiDetector);
         cellDetector.prepare();

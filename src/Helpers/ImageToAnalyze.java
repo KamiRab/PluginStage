@@ -12,11 +12,12 @@ import java.nio.file.Paths;
 
 /**
  * Class to facilitate display of ImagePlus names
- * and for images from directory creates the ImagePlus instances at the necessary time
+ * - For images from directory creates the ImagePlus instances at the necessary time
+ * - If directory set, creates Results directory
  */
 public class ImageToAnalyze {
     private ImagePlus imagePlus;
-    private String directory; /*directory to save results to and for not opened images, the directory containing them*/
+    private String directory; /*directory to save results them*/
     private final String imageName;
 
 //    CONSTRUCTORS
@@ -28,15 +29,7 @@ public class ImageToAnalyze {
      * @param imageName : name of image file
      */
     public ImageToAnalyze(String directory, String imageName) {
-        if (directory.contains("/")) {/*unify the directory delimiter*/
-            directory = directory.replace("/", "\\");
-        }
-        if (directory.endsWith("\\")) {
-            directory = directory.substring(0, directory.length() - 1);
-        }
-        this.directory = directory;
-//                        CREATE RESULTS DIRECTORY
-        createResultsDirectory(directory);
+        this.setDirectory(directory);
         this.imageName = imageName;
     }
 
@@ -62,7 +55,7 @@ public class ImageToAnalyze {
      */
     public ImagePlus getImagePlus() {
         if (imagePlus == null) {
-            this.imagePlus = IJ.openImage(directory + "\\" + imageName);
+            this.imagePlus = IJ.openImage(directory + "/" + imageName);
             this.imagePlus.setCalibration(null); /*remove calibration*/
         }
         ImagePlus toReturn = imagePlus.duplicate();
@@ -88,15 +81,26 @@ public class ImageToAnalyze {
 //    SETTERS
 
     /**
-     * Used for saving the results when the images are opened
-     *
-     * @param directory : name to save results
+     * Unify path separators and create results directory
+     * @param directory : path of directory
      */
     public void setDirectory(String directory) {
+//        UNIFY PATH SEPARATOR
+        if (directory.contains("\\")) {/*unify the directory delimiter*/
+            directory = directory.replace("\\", "/");
+        }
+//        REMOVE EXTRA SEPARATOR IF NECESSARY
+        if (directory.endsWith("/")) {
+            directory = directory.substring(0, directory.length() - 1);
+        }
         this.directory = directory;
+//        CREATE RESULTS DIRECTORY
         createResultsDirectory(directory);
     }
 
+
+
+    //    FUNCTIONS/METHODS
     /**
      * @return String with either name of image (image from directory) or image name with ID (if opened image)
      */
@@ -109,15 +113,13 @@ public class ImageToAnalyze {
         }
     }
 
-
-    //    FUNCTIONS/METHODS
-
     /**
      * Create result directory (with subdirectories Images and ROI)
+     * @param directory : path of directory
      */
     public static void createResultsDirectory(String directory) {
-        Path path = Paths.get(new File(directory).getAbsolutePath() + "\\Results\\Images");
-        Path path2 = Paths.get(new File(directory).getAbsolutePath() + "\\Results\\ROI");
+        Path path = Paths.get(new File(directory).getAbsolutePath() + "/Results/Images");
+        Path path2 = Paths.get(new File(directory).getAbsolutePath() + "/Results/ROI");
         try {
             Files.createDirectories(path);
         } catch (IOException ex) {
@@ -131,45 +133,53 @@ public class ImageToAnalyze {
     }
 
     /**
-     * For clarity in results
-     *
-     * @param image_name : name of image
+     * Remove extension of imageName
+     * @param imageName : name of image
      * @return name of image without extension, if extension exists
      */
-    public static String name_without_extension(String image_name) {
-        int lastPoint = image_name.lastIndexOf(".");
+    public static String nameWithoutExtension(String imageName) {
+        int lastPoint = imageName.lastIndexOf(".");
         if (lastPoint != -1) {
-            return image_name.substring(0, lastPoint);
+            return imageName.substring(0, lastPoint);
         } else {
-            return image_name;
+            return imageName;
         }
     }
 
-    public static boolean filterModel(DefaultListModel<ImageToAnalyze> model, String filter, ImageToAnalyze[] imagesNames, JLabel errorImageEndingLabel) {
-        for (ImageToAnalyze image : imagesNames) {
+    /**
+     * Filter list of image by name ending and if necessary display error message in panel
+     * Iterates on all names in the model and if the name does not end with the label given by user,
+     * it is removed from the model
+     * @param filteredImageList : JList model
+     * @param endingFilter : String that the images names should end by
+     * @param allImageList : all the images that have to be considered
+     * @param errorImageEndingLabel : Jlabel that is displayed in case of empty model
+     * @return true if there are images in the filteredImageList.
+     */
+    public static boolean filterModelbyEnding(DefaultListModel<ImageToAnalyze> filteredImageList, String endingFilter, ImageToAnalyze[] allImageList, JLabel errorImageEndingLabel) {
+        for (ImageToAnalyze image : allImageList) {
             String title = image.getImageName();
-            String title_wo_ext = ImageToAnalyze.name_without_extension(title);
-            if (!title.endsWith(filter) && !title_wo_ext.endsWith(filter)) {
-                if (model.contains(image)) {
-                    model.removeElement(image);
+            String titleWoExt = ImageToAnalyze.nameWithoutExtension(title);
+//          Assert if image title ends by filter
+            if (!title.endsWith(endingFilter) && !titleWoExt.endsWith(endingFilter)) { /*the title does not end by the filter*/
+                if (filteredImageList.contains(image)) { /*if model contains the image, removes it*/
+                    filteredImageList.removeElement(image);
                 }
-            } else {
-                if (!model.contains(image)) {
-                    model.addElement(image);
+            } else { /*the title ends by the filter*/
+                if (!filteredImageList.contains(image)) { /*if the model does not contain the image, adds it*/
+                    filteredImageList.addElement(image);
                 }
             }
         }
-        if (model.isEmpty()) {
+        if (filteredImageList.isEmpty()) {
             /*if no image corresponds to the filter, display all images names and an error*/
-            for (ImageToAnalyze imagePlusDisplay : imagesNames) {
-                model.addElement(imagePlusDisplay);
+            for (ImageToAnalyze imagePlusDisplay : allImageList) {
+                filteredImageList.addElement(imagePlusDisplay);
             }
             errorImageEndingLabel.setVisible(true);
-//            filteredImages = false; /*there are no images corresponding to the label*/
             return false; /*there are no images corresponding to the label*/
         } else {
             errorImageEndingLabel.setVisible(false);
-//            filteredImages = true; /*there are images corresponding to the label*/
             return true; /*there are images corresponding to the label*/
         }
     }

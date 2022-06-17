@@ -99,7 +99,7 @@ public class SpotPanel {
             for (ImageToAnalyze imagePlusDisplay : imagesNames) {
                 imageListModel.addElement(imagePlusDisplay);
             }
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
             imageList.setSelectedIndex(0);
         }
 //        ITEM LISTENERS
@@ -133,7 +133,7 @@ public class SpotPanel {
         });
         imageEndingField.addActionListener(e -> {
             imageEndingField.setText(imageEndingField.getText().trim());
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         });
     }
 
@@ -203,7 +203,7 @@ public class SpotPanel {
     private void addParametersToFile() {
         String directory = imageListModel.getElementAt(0).getDirectory();
         if (directory != null) {
-            String parameterFilename = directory + "\\Results\\Parameters.txt";
+            String parameterFilename = directory + "/Results/Parameters.txt";
             try {
                 FileWriter fileWriter = new FileWriter(parameterFilename, true);
                 BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);

@@ -111,7 +111,7 @@ public class NucleiPanel extends JPanel {
             for (ImageToAnalyze ip : imagesNames) {
                 imageListModel.addElement(ip);
             }
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
             imageList.setSelectedIndex(0);
         } else {
             IJ.error("No images (NucleiPanel");
@@ -120,7 +120,7 @@ public class NucleiPanel extends JPanel {
 //        ITEM LISTENERS
         imageEndingField.addActionListener(e -> {
             imageEndingField.setText(imageEndingField.getText().trim());
-            filteredImages = ImageToAnalyze.filterModel((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         });
         isAZStackCheckBox.addItemListener(e -> zStackParameters.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         chooseSlicesToUseCheckBox.addItemListener(e -> {
@@ -190,10 +190,11 @@ public class NucleiPanel extends JPanel {
                 nucleiDetector.setzStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
             }
         }
+        nucleiDetector.setSegmentation(finalValidationCheckBox.isSelected(),showBinaryMaskCheckBox.isSelected());
         if (cellPoseRadioButton.isSelected()) {
-            nucleiDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()), excludeOnEdges.isSelected(), showBinaryMaskCheckBox.isSelected());
+            nucleiDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()), excludeOnEdges.isSelected());
         } else {
-            nucleiDetector.setThresholdMethod(threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()), (Double) minSizeNucleusSpinner.getValue(), useWatershedCheckBox.isSelected(), excludeOnEdges.isSelected(), finalValidationCheckBox.isSelected(), showBinaryMaskCheckBox.isSelected());
+            nucleiDetector.setThresholdMethod(threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()), (Double) minSizeNucleusSpinner.getValue(), useWatershedCheckBox.isSelected(), excludeOnEdges.isSelected());
         }
         if (useAMacroCheckBox.isSelected()) {
             nucleiDetector.setPreprocessingMacro(macroArea.getText());
@@ -229,7 +230,7 @@ public class NucleiPanel extends JPanel {
     private void addParametersToFile() {
         String directory = imageListModel.getElementAt(0).getDirectory();
         if (directory != null) {
-            String parameterFilename = directory + "\\Results\\Parameters.txt";
+            String parameterFilename = directory + "/Results/Parameters.txt";
             try {
                 FileWriter fileWriter = new FileWriter(parameterFilename, true);
                 BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);

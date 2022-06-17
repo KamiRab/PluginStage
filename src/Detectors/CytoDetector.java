@@ -10,7 +10,7 @@ import java.io.File;
 
 public class CytoDetector {
 
-    private Roi[] nucleiRois;
+    private final Roi[] nucleiRois;
     private ImagePlus cellLabeledImage;
     private String nameExperiment;
     private MeasureCalibration measureCalibration;
@@ -50,7 +50,8 @@ public class CytoDetector {
         ImagePlus DAPI = IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 2_Foci_Cytoplasme\\Images\\Cell_02_w31 DAPI 405.TIF");
         NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", new MeasureCalibration(), "C:\\Users\\Camille\\Downloads\\Camille_Stage2022", true);
         nucleiDetector.setzStackParameters("Maximum projection");
-        nucleiDetector.setDeeplearning(100,"cyto2",true,true);
+        nucleiDetector.setSegmentation(false,true);
+        nucleiDetector.setDeeplearning(100,"cyto2",true);
         nucleiDetector.prepare();
         cellDetector.setNucleiDetector(nucleiDetector);
         cellDetector.prepare();
