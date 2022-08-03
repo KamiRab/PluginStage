@@ -1,6 +1,5 @@
 package Detectors;
 
-import GUI.PluginCellProt;
 import Helpers.MeasureCalibration;
 import ij.IJ;
 import ij.ImagePlus;
@@ -17,12 +16,7 @@ import ij.plugin.frame.RoiManager;
 import ij.process.ImageProcessor;
 
 import java.awt.*;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-//TODO Measures : nb de spots
-//TODO watershed
-//TODO what to do if number of cell and nucleus does not corresponds ?
+
 
 /**
  * Class that analyzes the spot images
@@ -30,50 +24,62 @@ import java.io.IOException;
  * It analyzes either by threshold+particle analyzer or by find Maxima method
  */
 public class SpotDetector {
-    private final ImagePlus image;
-    private ImagePlus imageToMeasure;
-    private final String nameExperiment;
+//    Images
+    private final ImagePlus image; /*Image without modifications*/
+    private ImagePlus imageToMeasure; /*Image that will be measured : only with projection*/
+
+//    Infos for results
+    private final String nameExperiment; /*Part of image name that differentiates them from*/
     private final String spotName;
-    private final MeasureCalibration measureCalibration;
+    private MeasureCalibration measureCalibration;
+
+//    Saving results infos
     private final String resultsDirectory;
-
-    private boolean useRollingBallSize;
-    private double rollingBallSize;
-
-    private ImagePlus findMaximaIP;
-    private boolean spotByfindMaxima;
-    private double prominence;
-    private boolean showMaximaImage;
     private boolean saveMaximaImage;
     private boolean saveMaximaRois;
-
-    private ImagePlus thresholdIP;
-    private String thresholdMethod;
-    private double minSizeSpot;
-    private boolean spotByThreshold;
-    private boolean useWatershed;
-    private boolean showThresholdImage;
     private boolean saveThresholdImage;
     private boolean saveThresholdRois;
 
-    private Roi[] nucleiROIs;
-    private final Detector detector;
-    private boolean useMacro;
+
+
+    //    Showing images
+    private boolean showMaximaImage;
+    private boolean showThresholdImage;
     private final boolean showPreprocessedImage;
+
+
+    //    Preprocessing
+    //    --> substract background
+    private boolean useRollingBallSize;
+    private double rollingBallSize;
+
+//    --> macro
     private String macroText;
 
+    //Detection of spots
+    //    --> find maxima
+    private ImagePlus findMaximaIP;
+    private boolean spotByfindMaxima;
+    private double prominence;
+
+//    --> threshold
+    private boolean spotByThreshold;
+    private ImagePlus thresholdIP;
+//    private String thresholdMethod;
+//    private double minSizeSpot;
+    private boolean useWatershed;
+    private final Detector detector;
 
     /**
      *
      * @param image
      * @param spotName
      * @param nameExperiment
-     * @param measureCalibration
      * @param resultsDirectory
 //     * @param showImage
      */
-    public SpotDetector(ImagePlus image, String spotName, String nameExperiment, MeasureCalibration measureCalibration, String resultsDirectory, boolean showPreprocessedImage) {
-        detector = new Detector(image, spotName, measureCalibration);
+    public SpotDetector(ImagePlus image, String spotName, String nameExperiment, String resultsDirectory, boolean showPreprocessedImage) {
+        detector = new Detector(image, spotName);
         this.resultsDirectory = resultsDirectory;
         this.showPreprocessedImage = showPreprocessedImage;
         this.image = image;
@@ -87,9 +93,17 @@ public class SpotDetector {
         this.useRollingBallSize = false;
         this.spotByThreshold = false;
         this.spotByfindMaxima = false;
-        this.nucleiROIs = null;
-        this.measureCalibration = measureCalibration;
+//        this.regionROI = null;
 
+    }
+
+    /**
+     *
+     * @param measureCalibration Calibration value and unit to use for measurements
+     */
+    public void setMeasureCalibration(MeasureCalibration measureCalibration){
+        detector.setMeasureCalibration(measureCalibration);
+        this.measureCalibration = measureCalibration;
     }
 
 
@@ -118,9 +132,11 @@ public class SpotDetector {
 
     public void setSpotByThreshold(String thresholdMethod, double minSizeSpot, boolean useWatershed, boolean showThresholdImage) {
         this.spotByThreshold = true;
-        this.thresholdMethod = thresholdMethod;
-        this.minSizeSpot = minSizeSpot;
+        this.showThresholdImage = showThresholdImage;
+//        this.thresholdMethod = thresholdMethod;
+//        this.minSizeSpot = minSizeSpot;
         this.useWatershed = useWatershed;
+        macroText = null;
         detector.setThresholdParameters(thresholdMethod,false,minSizeSpot);
     }
 
@@ -129,12 +145,11 @@ public class SpotDetector {
         this.saveThresholdRois=saveThresholdRois;
     }
     public void setPreprocessingMacro(String macroText){
-        this.useMacro = true;
         this.macroText = macroText;
     }
-    public void setNucleiROIs(Roi[] nucleiROIs) {
-        this.nucleiROIs = nucleiROIs;
-    }
+//    public void setRegionROI(Roi[] regionROI) {
+//        this.regionROI = regionROI;
+//    }
 
     public String getNameExperiment() {
         return nameExperiment;
@@ -146,17 +161,19 @@ public class SpotDetector {
 
     public void preview() {
 //        PREPROCESSING : PROJECTION, PRE-TREATMENT (substractbkg, macro)....
-        int[] idsToKeep = WindowManager.getIDList();
+//        int[] idsToKeep = WindowManager.getIDList();
         ImagePlus preprocessed;
         preprocessed = preprocessing();
         if (preprocessed!=null){
             if (showPreprocessedImage){
                 preprocessed.show();
             }
-            thresholdIP = preprocessed.duplicate();
+//            thresholdIP = preprocessed.duplicate();
             if (spotByThreshold) {
-                thresholdIP = detector.getThresholdMask(thresholdIP);
-                thresholdIP.show();
+                thresholdIP = detector.getThresholdMask(preprocessed);
+                if (showThresholdImage){
+                    thresholdIP.show();
+                }
                 if (useWatershed)   detector.getWatershed(thresholdIP.getProcessor()).show();
             }
             if (spotByfindMaxima) {
@@ -165,22 +182,22 @@ public class SpotDetector {
                 /*Find maxima*/
                 findMaxima(findMaximaIP);
             }
-            PluginCellProt.closeAllWindows("Preview is done",idsToKeep);
+//            PluginCellProt.closeAllWindows("Preview is done",idsToKeep);
         }
     }
 
     public boolean prepare(){
-        ImagePlus preprocessed;
-        preprocessed = preprocessing();
+        ImagePlus preprocessed = preprocessing();
         if (preprocessed!=null){
             if (showPreprocessedImage){
                 preprocessed.show();
             }
-            thresholdIP = preprocessed.duplicate();
+//            thresholdIP = preprocessed.duplicate();
             if (spotByThreshold) {
                 thresholdIP = detector.getThresholdMask(preprocessed);
                 if (useWatershed){
                     thresholdIP = detector.getWatershed(thresholdIP.getProcessor());
+                    detector.renameImage(thresholdIP,"watershed");
                 }
                 if (showThresholdImage){
                     thresholdIP.show();
@@ -218,70 +235,50 @@ public class SpotDetector {
                     }
                 }
             }
-            if (resultsDirectory!=null){
-                String parameterFilename = resultsDirectory+"/Results/Parameters.txt";
-                try {
-                    FileWriter fileWriter = new FileWriter(parameterFilename,true);
-                    BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-                    bufferedWriter.append("\nSPOT ").append(spotName).append(" Parameters");
-                    if (spotByfindMaxima){
-                        bufferedWriter.append("\nFind by maxima parameters:");
-                        bufferedWriter.append("\nProminence :").append(String.valueOf(prominence));
-                    } if (spotByThreshold){
-                        bufferedWriter.append("\nThresholding parameters : ");
-                        bufferedWriter.append("\nThreshold method :").append(thresholdMethod);
-                        bufferedWriter.append("\nMinimum spot diameter :").append(String.valueOf(minSizeSpot));
-                        bufferedWriter.append("\nThresholding watershed ").append(useWatershed?"yes":"no");
-                    }
-                    bufferedWriter.close();
-                }catch (IOException e){
-                    e.printStackTrace();
-                    IJ.log("The parameters could not be written.");
-                }
-            }
             return true;
         }else return false;
     }
 
-    public void analysisPerRegion(int nucleus, ResultsTable resultsTableFinal, String type) {
-        if (nucleus==0){
-            detector.setLocalisation(type);
-        }
-        imageToMeasure.setRoi(nucleiROIs[nucleus]);
+    public void analysisPerRegion(int regionID,Roi regionROI, ResultsTable resultsTableFinal, String type) {
+        imageToMeasure.setRoi(regionROI);
         ResultsTable rawMesures = new ResultsTable();
         Analyzer analyzer = new Analyzer(imageToMeasure, Measurements.MEAN +Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
         analyzer.measure();
-        detector.setResultsAndRename(rawMesures,resultsTableFinal,0); /*always first line, because analyzer replace line*/
+//        rawMesures.show("Spot results");
+        detector.setResultsAndRename(rawMesures,resultsTableFinal,0,type + "_"+ spotName); /*always first line, because analyzer replace line*/
         if (spotByfindMaxima) {
-            findMaximaPerRegion(nucleus, resultsTableFinal,type);
+            findMaximaPerRegion(regionROI, resultsTableFinal,type);
         }
         if (spotByThreshold) {
-            findThresholdPerRegion(nucleus, resultsTableFinal,type);
+            findThresholdPerRegion(regionID,regionROI, resultsTableFinal,type);
         }
     }
 
-    private void findThresholdPerRegion(int region, ResultsTable resultsTableToAdd, String type) {
-        RoiManager roiManagerFoci;
-        thresholdIP.setRoi(nucleiROIs[region]);
-        thresholdIP.getProcessor().invertLut();
-        roiManagerFoci = detector.analyzeParticles(thresholdIP);
-        if (resultsDirectory!=null&&saveThresholdRois){
-            if (roiManagerFoci.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + "_threshold_"+type +(region+1)+"_roi.zip")){
-                IJ.log("The ROIs of the "+type + " "+(region+1)+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"/Results/ROIs/");
-            }else {
-                IJ.log("The ROIs of the "+type + " "+ (region+1)+" of the image "+image.getTitle() + " by threshold method could not be saved in "+ resultsDirectory+"/Results/ROIs/");
+    private void findThresholdPerRegion(int regionID,Roi regionROI, ResultsTable resultsTableToAdd, String type) {
+        RoiManager roiManagerFoci=null;
+        int numberSpot = 0;
+        if (regionROI!=null){
+            thresholdIP.setRoi(regionROI);
+            thresholdIP.getProcessor().invertLut();
+            roiManagerFoci = detector.analyzeParticles(thresholdIP);
+            numberSpot = roiManagerFoci.getCount();
+            if (resultsDirectory!=null&&saveThresholdRois && numberSpot>0){
+                if (roiManagerFoci.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + "_threshold_"+type +(regionID+1)+"_roi.zip")){
+                    IJ.log("The ROIs of the "+type + " "+(regionID+1)+" of the image "+image.getTitle() + " by threshold method were saved in "+ resultsDirectory+"/Results/ROIs/");
+                }else {
+                    IJ.log("The ROIs of the "+type + " "+ (regionID+1)+" of the image "+image.getTitle() + " by threshold method could not be saved in "+ resultsDirectory+"/Results/ROIs/");
+                }
             }
         }
-        int numberSpot = roiManagerFoci.getCount();
-        ResultsTable resultsTable = new ResultsTable();
-        Analyzer analyzer = new Analyzer(imageToMeasure, Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY, resultsTable);
         resultsTableToAdd.addValue(type+"_"+spotName+" threshold nr. spot",numberSpot);
         if (numberSpot > 0) {
+            ResultsTable resultsTable = new ResultsTable();
+            Analyzer analyzer = new Analyzer(imageToMeasure, Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY, resultsTable);
             for (int spot = 0; spot < numberSpot; spot++) {
                 roiManagerFoci.select(imageToMeasure, spot);
                 analyzer.measure();
             }
-            detector.setSummarizedResults(resultsTable,resultsTableToAdd);
+            detector.setSummarizedResults(resultsTable,resultsTableToAdd,type + "_"+ spotName);
         } else {
             resultsTableToAdd.addValue(type + "_"+ spotName + " threshold Area (pixel)", Double.NaN);
             resultsTableToAdd.addValue(type + "_"+ spotName + " threshold Area (" + measureCalibration.getUnit() + ")", Double.NaN);
@@ -290,8 +287,9 @@ public class SpotDetector {
         }
     }
 
-    private void findMaximaPerRegion(int region, ResultsTable resultsTableToAdd, String type) {
-        findMaximaIP.setRoi(nucleiROIs[region]);
+    private void findMaximaPerRegion(Roi regionROI, ResultsTable resultsTableToAdd, String type) {
+//        TODO if region roi == null ?
+        findMaximaIP.setRoi(regionROI);
 //                    Find maxima
         PointRoi roiMaxima = findMaxima(findMaximaIP);
 //                    Get statistics
@@ -313,13 +311,16 @@ public class SpotDetector {
 //        PROJECTION : convert stack to one image
             imageToMeasure=detector.getImage();
             ImagePlus imageToReturn = detector.getImage().duplicate();
-            if (useMacro){
+            ImagePlus temp;
+//      MACRO : apply custom commands of user
+            if (macroText!=null){
                 imageToReturn.show();
                 IJ.selectWindow(imageToReturn.getID());
                 IJ.runMacro("setBatchMode(true);"+macroText+"setBatchMode(false);");
-                imageToReturn = WindowManager.getCurrentImage();
-                imageToReturn.changes=false;
-                imageToReturn.close();
+                temp = WindowManager.getCurrentImage();
+                imageToReturn = temp.duplicate();
+                temp.changes=false;
+                temp.close();
             }
             if (useRollingBallSize){
                 imageToReturn = getSubstractBackground();
@@ -332,38 +333,41 @@ public class SpotDetector {
         ImagePlus wobkgIP = imageToMeasure.duplicate();
         detector.renameImage(wobkgIP, "withoutBackground");
         BackgroundSubtracter backgroundSubtracter = new BackgroundSubtracter();
-        backgroundSubtracter.rollingBallBackground(wobkgIP.getProcessor(), rollingBallSize, false, false, false, true, false); /*Hmm correctCorners ?*/
+        backgroundSubtracter.rollingBallBackground(wobkgIP.getProcessor(), rollingBallSize, false, false, false, true, false);
         return wobkgIP;
     }
 
     private PointRoi findMaxima(ImagePlus findMaximaIP) {
         MaximumFinder maximumFinder = new MaximumFinder();
         ImageProcessor findMaximaProc = findMaximaIP.getProcessor();
-        if (showMaximaImage) {
-            findMaximaIP.show();
-        }
         Polygon maxima = maximumFinder.getMaxima(findMaximaProc, prominence, true);
         PointRoi roiMaxima = new PointRoi(maxima);
         findMaximaIP.setRoi(roiMaxima);
+        if (showMaximaImage) {
+            findMaximaIP.flatten();
+            findMaximaIP.show();
+        }
         return roiMaxima;
 //        findMaxima_IP.setRoi(roi_maxima);
     }
 
     public static void main(String[] args) {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", /*false,*/ new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022",true);
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003", "C:/Users/Camille/Downloads/Camille_Stage2022",true);
+        nucleiDetector.setMeasureCalibration(new MeasureCalibration());
         nucleiDetector.setzStackParameters("Maximum projection");
         nucleiDetector.setSegmentation(false,true);
         nucleiDetector.setThresholdMethod("Li", 1000, false, true);
         nucleiDetector.prepare();
 
         ImagePlus protein = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        SpotDetector spotDetector = new SpotDetector(protein, "CY5", "WT_HU_Ac-2re--cell003", new MeasureCalibration(), "C:/Users/Camille/Downloads/Camille_Stage2022",true);
+        SpotDetector spotDetector = new SpotDetector(protein, "CY5", "WT_HU_Ac-2re--cell003", "C:/Users/Camille/Downloads/Camille_Stage2022",true);
+        spotDetector.setMeasureCalibration(new MeasureCalibration());
         spotDetector.setRollingBallSize(10);
         spotDetector.setzStackParameters("Maximum projection");
 //        spotDetector.setSpotByfindMaxima(1000);
         spotDetector.setSpotByThreshold("Li", 10, true,true);
-        spotDetector.setNucleiROIs(nucleiDetector.getRoiArray());
+//        spotDetector.setRegionROI(nucleiDetector.getRoiArray());
 //        spotDetector.prepare();
         spotDetector.preview();
 //        ResultsTable test = new ResultsTable();

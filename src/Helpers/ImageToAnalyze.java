@@ -4,6 +4,7 @@ import ij.IJ;
 import ij.ImagePlus;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -49,7 +50,7 @@ public class ImageToAnalyze {
 //    GETTERS
 
     /**
-     * If ImagePlus does not exists, creates the instance
+     * If ImagePlus does not exist, creates the instance
      *
      * @return ImagePlus instance
      */
@@ -61,6 +62,14 @@ public class ImageToAnalyze {
         ImagePlus toReturn = imagePlus.duplicate();
         toReturn.setTitle(imageName);
         return toReturn;
+    }
+
+    /**
+     *
+     * @return ID of image
+     */
+    public int getID(){
+       return imagePlus.getID();
     }
 
     /**
@@ -95,7 +104,9 @@ public class ImageToAnalyze {
         }
         this.directory = directory;
 //        CREATE RESULTS DIRECTORY
-        createResultsDirectory(directory);
+        if (!new File(directory + "/Results/Images").exists() ||!new File(directory + "/Results/ROI").exists()){
+            createResultsDirectory(directory);
+        }
     }
 
 
@@ -176,11 +187,34 @@ public class ImageToAnalyze {
             for (ImageToAnalyze imagePlusDisplay : allImageList) {
                 filteredImageList.addElement(imagePlusDisplay);
             }
-            errorImageEndingLabel.setVisible(true);
+            errorImageEndingLabel.setText("No image corresponding to ending.");
+            errorImageEndingLabel.setForeground(Color.RED);
             return false; /*there are no images corresponding to the label*/
         } else {
-            errorImageEndingLabel.setVisible(false);
+            errorImageEndingLabel.setText(filteredImageList.size()+" image(s) corresponding to ending.");
+            errorImageEndingLabel.setForeground(Color.decode("#00833D"));
             return true; /*there are images corresponding to the label*/
+        }
+    }
+
+    /**
+     * Assert that the prefs save int are in the possible slices number
+     * @param maxSlices maximal number of slices in image
+     * @param firstSlice : firstSlice in prefs
+     * @param lastSlice : lastSlice in prefs
+     * @param firstSliceSpinner :spinner for first Slice
+     * @param lastSliceSpinner : spinner for last slice
+     */
+    public static void assertSlices(int maxSlices, int firstSlice, int lastSlice, JSpinner firstSliceSpinner, JSpinner lastSliceSpinner) {
+        if(firstSlice<=maxSlices){
+            firstSliceSpinner.setModel(new SpinnerNumberModel(firstSlice,1,maxSlices,1));
+        }else {
+            firstSliceSpinner.setModel(new SpinnerNumberModel(1,1,maxSlices,1));
+        }
+        if (lastSlice<=maxSlices){
+            lastSliceSpinner.setModel(new SpinnerNumberModel(lastSlice,1,maxSlices,1));
+        }else {
+            lastSliceSpinner.setModel(new SpinnerNumberModel(maxSlices,1,maxSlices,1));
         }
     }
 

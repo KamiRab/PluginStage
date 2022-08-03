@@ -1,7 +1,6 @@
 package GUI;
 
 import Detectors.SpotDetector;
-import Helpers.MeasureCalibration;
 import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -21,6 +20,7 @@ import java.util.ArrayList;
 
 public class SpotPanel {
     private final int id;
+    private final boolean fromDirectory;
     //    GUI COMPONENTS
     private JPanel mainPanel;
     //    Image selection
@@ -44,7 +44,7 @@ public class SpotPanel {
     private JSpinner firstSliceSpinner;
     private JSpinner lastSliceSpinner;
     //    Macro
-    private JPanel macroPannel;
+    private JPanel macroPanel;
     private JCheckBox useAMacroCheckBox;
     private JTextArea macroArea;
     private JScrollPane macroAreaScroll;
@@ -68,31 +68,26 @@ public class SpotPanel {
     private JLabel threshMethodsLabel;
     private JPanel slicesPanel;
     private JCheckBox useWatershedCheckBox;
-    private JCheckBox showBinaryMaskCheckBox;
-    private JCheckBox showMaximaImageCheckBox;
-    private JCheckBox saveMaximaImageCheckBox;
-    private JCheckBox saveMaximaROIsCheckBox;
-    private JCheckBox saveThresholdROIsCheckBox;
-    private JCheckBox saveBinaryMaskCheckBox;
+    private JCheckBox showImageCheckBox;
+    private JCheckBox saveImageCheckBox;
+    private JCheckBox saveROIsCheckBox;
     private JCheckBox showPreprocessingImageCheckBox;
 
     //    NON GUI
     private final ImageToAnalyze[] imagesNames;
     private final DefaultListModel<ImageToAnalyze> imageListModel = new DefaultListModel<>();
     private boolean filteredImages;
-    private final MeasureCalibration measureCalibration;
-    private final boolean showImages;
 
-    //    TODO mean and integrated density always (even if no method)
-    public SpotPanel(ImageToAnalyze[] ipList, MeasureCalibration measureCalibration, int id, boolean showImages) {
+    public SpotPanel(ImageToAnalyze[] ipList, int id, boolean fromDirectory) {
+        this.fromDirectory = fromDirectory;
         $$$setupUI$$$();
-        this.measureCalibration = measureCalibration;
+//        this.measureCalibration = measureCalibration;
         imagesNames = ipList;
         this.id = id;
-        this.showImages = showImages;
-
-//        GET PREFERENCES
+        //        GET PREFERENCES
         getPreferences();
+
+
         //        List of images
         if (imagesNames != null) {
             imageListModel.removeElement(null);
@@ -101,14 +96,27 @@ public class SpotPanel {
             }
             filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
             imageList.setSelectedIndex(0);
+        } else {
+            IJ.error("No images (SpotPanel" + id + ")");
         }
 //        ITEM LISTENERS
         isAZStackCheckBox.addItemListener(e -> zStackParametersPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
-        useAMacroCheckBox.addItemListener(e -> macroPannel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
+        useAMacroCheckBox.addItemListener(e -> macroPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         chooseSlicesToUseCheckBox.addItemListener(e -> slicesPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED));
-
-        useFindMaximaCheckBox.addItemListener(e -> maximaPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED));
-        useThresholdCheckBox.addItemListener(e -> thresholdPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED));
+        useFindMaximaCheckBox.addItemListener(e -> {
+            maximaPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            prominenceLabel.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            prominenceSpinner.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+        });
+        useThresholdCheckBox.addItemListener(e -> {
+            thresholdPanel.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            threshMethodsCombo.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            threshMethodsLabel.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            useWatershedCheckBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            threshMethodsCombo.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            minSizeSpotSpinner.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+            minSizeSpotLabel.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+        });
         previewButton.addActionListener(e -> {
             if (imageListModel.getSize() > 0) {
                 if (!imageList.isSelectionEmpty()) {
@@ -138,18 +146,16 @@ public class SpotPanel {
     }
 
     public void setResultsCheckbox(boolean wantToSave) {
-        saveMaximaImageCheckBox.setVisible(wantToSave);
-        saveMaximaROIsCheckBox.setVisible(wantToSave);
-        saveBinaryMaskCheckBox.setVisible(wantToSave);
-        saveThresholdROIsCheckBox.setVisible(wantToSave);
+        saveImageCheckBox.setVisible(wantToSave);
+        saveROIsCheckBox.setVisible(wantToSave);
     }
 
     private SpotDetector getSpotDetector(ImageToAnalyze firstImage, String spotName, String nameExperiment, boolean isPreview) {
         SpotDetector spotDetector;
         if (isPreview) {
-            spotDetector = new SpotDetector(firstImage.getImagePlus(), spotName, nameExperiment, measureCalibration, null, true);
+            spotDetector = new SpotDetector(firstImage.getImagePlus(), spotName, nameExperiment, null, true);
         } else {
-            spotDetector = new SpotDetector(firstImage.getImagePlus(), spotName, nameExperiment, measureCalibration, firstImage.getDirectory(), showPreprocessingImageCheckBox.isSelected());
+            spotDetector = new SpotDetector(firstImage.getImagePlus(), spotName, nameExperiment, firstImage.getDirectory(), showPreprocessingImageCheckBox.isSelected());
         }
         if (isAZStackCheckBox.isSelected()) {
             if (chooseSlicesToUseCheckBox.isSelected()) {
@@ -162,12 +168,12 @@ public class SpotPanel {
             spotDetector.setRollingBallSize((double) rollingBallSizeSpinner.getValue());
         }
         if (useFindMaximaCheckBox.isSelected()) {
-            spotDetector.setSpotByfindMaxima((double) prominenceSpinner.getValue(), showMaximaImageCheckBox.isSelected());
-            spotDetector.setMaximaSaving(saveMaximaImageCheckBox.isSelected(), saveMaximaROIsCheckBox.isSelected());
+            spotDetector.setSpotByfindMaxima((double) prominenceSpinner.getValue(), isPreview || showImageCheckBox.isSelected());
+            spotDetector.setMaximaSaving(saveImageCheckBox.isSelected(), saveROIsCheckBox.isSelected());
         }
         if (useThresholdCheckBox.isSelected()) {
-            spotDetector.setSpotByThreshold(threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()), (double) minSizeSpotSpinner.getValue(), useWatershedCheckBox.isSelected(), showBinaryMaskCheckBox.isSelected());
-            spotDetector.setThresholdSaving(saveBinaryMaskCheckBox.isSelected(), saveThresholdROIsCheckBox.isSelected());
+            spotDetector.setSpotByThreshold(threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()), (double) minSizeSpotSpinner.getValue(), useWatershedCheckBox.isSelected(), isPreview || showImageCheckBox.isSelected());
+            spotDetector.setThresholdSaving(saveImageCheckBox.isSelected(), saveROIsCheckBox.isSelected());
         }
         if (useAMacroCheckBox.isSelected()) {
             spotDetector.setPreprocessingMacro(macroArea.getText());
@@ -190,7 +196,6 @@ public class SpotPanel {
             IJ.error("No images given for spot " + (id + 1) + ". Please verify the image ending corresponds to at least an image.");
             return null;
         } else {
-            addParametersToFile();
             for (int i = 0; i < imageListModel.getSize(); i++) {
                 image = imageListModel.getElementAt(i);
                 nameExperiment = image.getImagePlus().getTitle().split(imageEndingField.getText())[0];
@@ -200,7 +205,8 @@ public class SpotPanel {
         }
     }
 
-    private void addParametersToFile() {
+    //
+    public void addParametersToFile() {
         String directory = imageListModel.getElementAt(0).getDirectory();
         if (directory != null) {
             String parameterFilename = directory + "/Results/Parameters.txt";
@@ -261,7 +267,7 @@ public class SpotPanel {
         zProjPanel.setBorder(BorderFactory.createTitledBorder(null, "Preprocessing", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         isAZStackCheckBox = new JCheckBox();
         isAZStackCheckBox.setSelected(true);
-        isAZStackCheckBox.setText("Is a z-stack ?");
+        isAZStackCheckBox.setText("Is a Z-stack ?");
         zProjPanel.add(isAZStackCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useAMacroCheckBox = new JCheckBox();
         useAMacroCheckBox.setText("Use macro code");
@@ -286,11 +292,11 @@ public class SpotPanel {
         chooseSlicesToUseCheckBox = new JCheckBox();
         chooseSlicesToUseCheckBox.setText("Choose slices to use");
         zStackParametersPanel.add(chooseSlicesToUseCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        macroPannel = new JPanel();
-        macroPannel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        zProjPanel.add(macroPannel, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        macroPanel = new JPanel();
+        macroPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        zProjPanel.add(macroPanel, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         macroAreaScroll = new JScrollPane();
-        macroPannel.add(macroAreaScroll, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        macroPanel.add(macroAreaScroll, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         macroArea = new JTextArea();
         macroArea.setRows(2);
         macroAreaScroll.setViewportView(macroArea);
@@ -307,7 +313,9 @@ public class SpotPanel {
         panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         panel1.add(rollingBallSizeSpinner, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         showPreprocessingImageCheckBox = new JCheckBox();
+        showPreprocessingImageCheckBox.setEnabled(true);
         showPreprocessingImageCheckBox.setText("Show preprocessing image");
+        showPreprocessingImageCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
         zProjPanel.add(showPreprocessingImageCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         generalParametersPanel = new JPanel();
         generalParametersPanel.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
@@ -316,28 +324,19 @@ public class SpotPanel {
         previewButton.setText("Preview");
         generalParametersPanel.add(previewButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         choiceMethodPanel = new JPanel();
-        choiceMethodPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        choiceMethodPanel.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
         generalParametersPanel.add(choiceMethodPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         choiceMethodPanel.setBorder(BorderFactory.createTitledBorder(null, "Spot detection method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         maximaPanel = new JPanel();
-        maximaPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
+        maximaPanel.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         choiceMethodPanel.add(maximaPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         maximaPanel.setBorder(BorderFactory.createTitledBorder(null, "Find maxima method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         prominenceLabel = new JLabel();
         prominenceLabel.setText("Prominence");
         maximaPanel.add(prominenceLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         maximaPanel.add(prominenceSpinner, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        showMaximaImageCheckBox = new JCheckBox();
-        showMaximaImageCheckBox.setText("Show maxima image");
-        maximaPanel.add(showMaximaImageCheckBox, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveMaximaImageCheckBox = new JCheckBox();
-        saveMaximaImageCheckBox.setText("Save maxima image");
-        maximaPanel.add(saveMaximaImageCheckBox, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveMaximaROIsCheckBox = new JCheckBox();
-        saveMaximaROIsCheckBox.setText("Save maxima ROIs");
-        maximaPanel.add(saveMaximaROIsCheckBox, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         thresholdPanel = new JPanel();
-        thresholdPanel.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
+        thresholdPanel.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
         choiceMethodPanel.add(thresholdPanel, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         thresholdPanel.setBorder(BorderFactory.createTitledBorder(null, "Threshold method", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         minSizeSpotLabel = new JLabel();
@@ -347,19 +346,10 @@ public class SpotPanel {
         threshMethodsLabel = new JLabel();
         threshMethodsLabel.setText("Threshold Method");
         thresholdPanel.add(threshMethodsLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        showBinaryMaskCheckBox = new JCheckBox();
-        showBinaryMaskCheckBox.setText("Show binary mask");
-        thresholdPanel.add(showBinaryMaskCheckBox, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        thresholdPanel.add(threshMethodsCombo, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        thresholdPanel.add(threshMethodsCombo, new GridConstraints(0, 1, 1, 3, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         useWatershedCheckBox = new JCheckBox();
         useWatershedCheckBox.setText("Use watershed");
-        thresholdPanel.add(useWatershedCheckBox, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveThresholdROIsCheckBox = new JCheckBox();
-        saveThresholdROIsCheckBox.setText("Save threshold ROIs");
-        thresholdPanel.add(saveThresholdROIsCheckBox, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveBinaryMaskCheckBox = new JCheckBox();
-        saveBinaryMaskCheckBox.setText("Save segmentation mask");
-        thresholdPanel.add(saveBinaryMaskCheckBox, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        thresholdPanel.add(useWatershedCheckBox, new GridConstraints(1, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useFindMaximaCheckBox = new JCheckBox();
         useFindMaximaCheckBox.setSelected(true);
         useFindMaximaCheckBox.setText("Find maxima");
@@ -368,6 +358,19 @@ public class SpotPanel {
         useThresholdCheckBox.setSelected(true);
         useThresholdCheckBox.setText("Threshold");
         choiceMethodPanel.add(useThresholdCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        choiceMethodPanel.add(panel2, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        saveROIsCheckBox = new JCheckBox();
+        saveROIsCheckBox.setText("Save ROIs");
+        panel2.add(saveROIsCheckBox, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        showImageCheckBox = new JCheckBox();
+        showImageCheckBox.setText("Show image(s)");
+        showImageCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
+        panel2.add(showImageCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        saveImageCheckBox = new JCheckBox();
+        saveImageCheckBox.setText("Save image(s)");
+        panel2.add(saveImageCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         spotChannelField = new JTextField();
         spotChannelField.setText("");
         mainPanel.add(spotChannelField, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
@@ -397,7 +400,7 @@ public class SpotPanel {
         minSizeSpotSpinner = new JSpinner(new SpinnerNumberModel(10, 0.0, Integer.MAX_VALUE, 1));
 
 //        prominence spinner
-        prominenceSpinner = new JSpinner(new SpinnerNumberModel(500.0, 0.0, Integer.MAX_VALUE, 0.5));
+        prominenceSpinner = new JSpinner(new SpinnerNumberModel(500.0, 0.0, Integer.MAX_VALUE, 1));
 //rolling ball size
         rollingBallSizeSpinner = new JSpinner(new SpinnerNumberModel(10.0, 0.0, Integer.MAX_VALUE, 1.0));
         firstSliceSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 9999, 1));
@@ -410,52 +413,108 @@ public class SpotPanel {
      * Get preferences from ImageJ/Fiji file
      */
     private void getPreferences() {
-        spotChannelField.setText(Prefs.get("PluginToName.spotName_" + id, "CY5"));
-        imageEndingField.setText(Prefs.get("PluginToName.spotEnding_" + id, "_w11 CY5"));
-        isAZStackCheckBox.setSelected(Prefs.get("PluginToName.zStackSpot_" + id, true));
-        zProjMethodsCombo.setSelectedItem(Prefs.get("PluginToName.ProjMethodsSpot_" + id, "Maximum projection"));
-        chooseSlicesToUseCheckBox.setSelected(Prefs.get("PluginToName.chooseSlidesSpot_" + id, false));
+//        Name spot
+        spotChannelField.setText(Prefs.get("MICMAQ.spotName_" + id, "CY5"));
+        imageEndingField.setText(Prefs.get("MICMAQ.spotEnding_" + id, "_w11 CY5"));
+
+//        Z-projection
+        isAZStackCheckBox.setSelected(Prefs.get("MICMAQ.zStackSpot_" + id, true));
+        zProjMethodsCombo.setSelectedItem(Prefs.get("MICMAQ.ProjMethodsSpot_" + id, "Maximum projection"));
+        chooseSlicesToUseCheckBox.setSelected(Prefs.get("MICMAQ.chooseSlicesSpot_" + id, false));
         if (!chooseSlicesToUseCheckBox.isSelected()) {
             slicesPanel.setVisible(false);
         }
-        firstSliceSpinner.setValue((int) Prefs.get("PluginToName.firstSliceSpot_" + id, 1));
-        lastSliceSpinner.setValue((int) Prefs.get("PluginToName.lastSliceSpot_" + id, imagesNames[0].getImagePlus().getNSlices()));
-        useAMacroCheckBox.setSelected(Prefs.get("PluginToName.useMacroSpot_" + id, false));
-        if (!useAMacroCheckBox.isSelected()) macroPannel.setVisible(false);
-        macroArea.append(Prefs.get("PluginToName.macroSpot_" + id, " ")); /*TODO default macro ?*/
-        useRollingBallCheckBox.setSelected(Prefs.get("PluginToName.rollingballCheckSpot_" + id, true));
-        rollingBallSizeSpinner.setValue(Prefs.get("PluginToName.rollingballSizeSpot_" + id, 10));
-        useFindMaximaCheckBox.setSelected(Prefs.get("PluginToName.findMaximaSelectedSpot_" + id, true));
-        maximaPanel.setEnabled(useFindMaximaCheckBox.isSelected());
-        useThresholdCheckBox.setSelected(Prefs.get("PluginToName.thresholdSelectedSpot_" + id, false));
-        thresholdPanel.setEnabled(useThresholdCheckBox.isSelected());
-        prominenceSpinner.setValue(Prefs.get("PluginToName.prominence_" + id, 500));
-        threshMethodsCombo.setSelectedItem(Prefs.get("PluginToName.thresholdMethodSpot_" + id, "Li"));
-        minSizeSpotSpinner.setValue(Prefs.get("PluginToName.minSizeSpot_" + id, 10));
-        useWatershedCheckBox.setSelected(Prefs.get("PluginToName.useWatershedSpot_" + id, false));
+        int maxSlices = imagesNames[0].getImagePlus().getNSlices();
+        int firstSlice = (int) Prefs.get("MICMAQ.firstSliceSpot_" + id, 1);
+        int lastSlice = (int) Prefs.get("MICMAQ.lastSliceSpot_" + id, imagesNames[0].getImagePlus().getNSlices());
+        ImageToAnalyze.assertSlices(maxSlices, firstSlice, lastSlice, firstSliceSpinner, lastSliceSpinner);
+
+//        Macro
+        useAMacroCheckBox.setSelected(Prefs.get("MICMAQ.useMacroSpot_" + id, false));
+        if (!useAMacroCheckBox.isSelected()) macroPanel.setVisible(false);
+        macroArea.append(Prefs.get("MICMAQ.macroSpot_" + id, " ")); /*TODO default macro ?*/
+
+//        Rolling ball
+        useRollingBallCheckBox.setSelected(Prefs.get("MICMAQ.rollingballCheckSpot_" + id, true));
+        rollingBallSizeSpinner.setValue(Prefs.get("MICMAQ.rollingballSizeSpot_" + id, 10));
+
+//        Find maxima
+        if (!Prefs.get("MICMAQ.findMaximaSelectedSpot_" + id, true)) {
+            useFindMaximaCheckBox.doClick();
+        }
+        prominenceSpinner.setValue(Prefs.get("MICMAQ.prominence_" + id, 500));
+
+//       Threshold
+        if (!Prefs.get("MICMAQ.thresholdSelectedSpot_" + id, false)) {
+            useThresholdCheckBox.doClick();
+        }
+        threshMethodsCombo.setSelectedItem(Prefs.get("MICMAQ.thresholdMethodSpot_" + id, "Li"));
+        minSizeSpotSpinner.setValue(Prefs.get("MICMAQ.minSizeSpot_" + id, 10));
+        useWatershedCheckBox.setSelected(Prefs.get("MICMAQ.useWatershedSpot_" + id, false));
+
+
+//        Show and save images ?
+        saveROIsCheckBox.setSelected(Prefs.get("MICMAQ.saveROISpot_" + id, true));
+        saveROIsCheckBox.setSelected(Prefs.get("MICMAQ.saveROISpot_" + id, true));
+
+        if (fromDirectory) {
+            showPreprocessingImageCheckBox.setSelected(false);
+            showPreprocessingImageCheckBox.setVisible(false);
+            showImageCheckBox.setVisible(false);
+            showImageCheckBox.setSelected(false);
+        } else {
+            showPreprocessingImageCheckBox.setSelected(Prefs.get("MICMAQ.showPreproSpot_" + id, true));
+            showImageCheckBox.setSelected(Prefs.get("MICMAQ.showImageSpot_" + id, true));
+        }
     }
+
 
     /**
      * Set preferences for ImageJ/Fiji
      */
     public void setPreferences() {
-        Prefs.set("PluginToName.spotName_" + id, spotChannelField.getText());
-        Prefs.set("PluginToName.spotEnding_" + id, imageEndingField.getText());
-        Prefs.set("PluginToName.zStackSpot_" + id, isAZStackCheckBox.isSelected());
-        Prefs.set("PluginToName.ProjMethodsSpot_" + id, zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
-        Prefs.set("PluginToName.chooseSlidesSpot_" + id, chooseSlicesToUseCheckBox.isSelected());
-        Prefs.set("PluginToName.firstSliceSpot_" + id, (double) (int) firstSliceSpinner.getValue());
-        Prefs.set("PluginToName.lastSliceSpot_" + id, (double) (int) lastSliceSpinner.getValue());
-        Prefs.set("PluginToName.useMacroSpot_" + id, useAMacroCheckBox.isSelected());
-        Prefs.set("PluginToName.macroSpot_" + id, macroArea.getText());
-        Prefs.set("PluginToName.rollingballCheckSpot_" + id, useRollingBallCheckBox.isSelected());
-        Prefs.set("PluginToName.rollingballSizeSpot_" + id, (double) rollingBallSizeSpinner.getValue());
-        Prefs.set("PluginToName.findMaximaSelectedSpot_" + id, useFindMaximaCheckBox.isSelected());
-        Prefs.set("PluginToName.thresholdSelectedSpot_" + id, useThresholdCheckBox.isSelected());
-        Prefs.set("PluginToName.prominence_" + id, (double) prominenceSpinner.getValue());
-        Prefs.set("PluginToName.thresholdMethodSpot_" + id, threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()));
-        Prefs.set("PluginToName.minSizeSpot_" + id, (double) minSizeSpotSpinner.getValue());
-        Prefs.set("PluginToName.useWatershedSpot_" + id, useWatershedCheckBox.isSelected());
+//        Name spot
+        Prefs.set("MICMAQ.spotName_" + id, spotChannelField.getText());
+        Prefs.set("MICMAQ.spotEnding_" + id, imageEndingField.getText());
+
+//        Z-projection
+        Prefs.set("MICMAQ.zStackSpot_" + id, isAZStackCheckBox.isSelected());
+        if (isAZStackCheckBox.isSelected()) {
+            Prefs.set("MICMAQ.ProjMethodsSpot_" + id, zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
+            Prefs.set("MICMAQ.chooseSlicesSpot_" + id, chooseSlicesToUseCheckBox.isSelected());
+            if (chooseSlicesToUseCheckBox.isSelected()) {
+                Prefs.set("MICMAQ.firstSliceSpot_" + id, (double) (int) firstSliceSpinner.getValue());
+                Prefs.set("MICMAQ.lastSliceSpot_" + id, (double) (int) lastSliceSpinner.getValue());
+            }
+        }
+
+//        Macro
+        Prefs.set("MICMAQ.useMacroSpot_" + id, useAMacroCheckBox.isSelected());
+        Prefs.set("MICMAQ.macroSpot_" + id, macroArea.getText());
+
+//        Rolling ball
+        Prefs.set("MICMAQ.rollingballCheckSpot_" + id, useRollingBallCheckBox.isSelected());
+        Prefs.set("MICMAQ.rollingballSizeSpot_" + id, (double) rollingBallSizeSpinner.getValue());
+
+//        Find maxima
+        Prefs.set("MICMAQ.findMaximaSelectedSpot_" + id, useFindMaximaCheckBox.isSelected());
+        Prefs.set("MICMAQ.prominence_" + id, (double) prominenceSpinner.getValue());
+
+//        Threshold
+        Prefs.set("MICMAQ.thresholdSelectedSpot_" + id, useThresholdCheckBox.isSelected());
+        Prefs.set("MICMAQ.thresholdMethodSpot_" + id, threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()));
+        Prefs.set("MICMAQ.minSizeSpot_" + id, (double) minSizeSpotSpinner.getValue());
+        Prefs.set("MICMAQ.useWatershedSpot_" + id, useWatershedCheckBox.isSelected());
+
+//        Show and save images ?
+        Prefs.set("MICMAQ.saveROISpot_" + id, saveROIsCheckBox.isSelected());
+        Prefs.set("MICMAQ.saveMaskSpot_" + id, saveImageCheckBox.isSelected());
+
+        if (!fromDirectory) {
+            Prefs.set("MICMAQ.showPreproSpot_" + id, showPreprocessingImageCheckBox.isSelected());
+            Prefs.set("MICMAQ.showImageSpot_" + id, showImageCheckBox.isSelected());
+        }
+
     }
 }
 

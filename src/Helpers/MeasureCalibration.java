@@ -97,7 +97,7 @@ public class MeasureCalibration {
 
             }
             reader.close();
-        } catch (FileNotFoundException e) { /*If calibration file does not exists, creates one*/
+        } catch (FileNotFoundException e) { /*If calibration file does not exist, creates one*/
             try {
                 createCalibrationFile(false);
                 return getCalibrationFromFile(); /* With file existing, it can be parsed */

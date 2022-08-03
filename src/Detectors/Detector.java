@@ -23,9 +23,9 @@ import static ij.IJ.d2s;
  */
 public class Detector {
     private ImagePlus image;
-    private final String name_image;
-    private String name_object;
-    private final MeasureCalibration measureCalibration;
+    private final String nameImage;
+    private final String nameObject;
+    private MeasureCalibration measureCalibration;
 
     //Projection parameters
     private String zStackProjMethod;
@@ -42,17 +42,20 @@ public class Detector {
     /**
      * Constructor with basics
      * @param image : image to analyze/measure
-     * @param name_object : "Nucleus" or name of protein
-     * @param measureCalibration : Helpers.Calibration to use
+     * @param nameObject : "Nucleus" or name of protein
      */
-    public Detector(ImagePlus image, String name_object, MeasureCalibration measureCalibration) {
-        this.image = image.duplicate();
-        this.name_image = image.getTitle();
-        this.name_object=name_object;
-        this.measureCalibration = measureCalibration;
+    public Detector(ImagePlus image, String nameObject) {
+        this.image = image;
+//        this.image = image.duplicate();
+        this.nameImage = image.getTitle();
+        this.nameObject =nameObject;
     }
 
 //    SETTER
+
+    public void setMeasureCalibration(MeasureCalibration measureCalibration){
+        this.measureCalibration=measureCalibration;
+    }
 
     /**
      * if projection to do, sets the necessary parameters and do the projection
@@ -80,13 +83,6 @@ public class Detector {
         this.minSizeParticle = minSizeParticle;
     }
 
-    /**
-     *  For spots to distinguish between regions
-     * @param type : nuclei, cell or cytoplasm
-     */
-    public void setLocalisation(String type){
-        this.name_object = type + "_"+this.name_object;
-    }
 //    GETTER
 
     public ImagePlus getImage() {
@@ -151,7 +147,6 @@ public class Detector {
         return roiManager;
     }
 
-//    TODO add use watershed in parameters
     /**
      * Creates a binary image to differentiate the objects to analyze
      * @param image : image to threshold
@@ -191,11 +186,15 @@ public class Detector {
      */
     public ImagePlus labeledImage(Roi[] rois){
         ImagePlus ip = NewImage.createShortImage("labeledImage",image.getWidth(),image.getHeight(),1,NewImage.FILL_BLACK);
+        int color = 1;
         for (int i = 0; i < rois.length; i++) {
-            ip.getProcessor().setColor(i+1);
-            ip.getProcessor().fill(rois[i]);
+            ip.getProcessor().setColor(color);
+            if (rois[i]!=null){
+                ip.getProcessor().fill(rois[i]);
+                color++;
+            }
         }
-        renameImage(ip,"labeled_mask");
+        renameImage(ip, nameObject +"_labeled_mask");
         return ip;
     }
 
@@ -237,7 +236,7 @@ public class Detector {
 //        ByteProcessor binary_threshold_proc = threshold_proc.convertToByteProcessor();
         EDM edm = new EDM();
         edm.toWatershed(binary_threshold_proc);
-        return new ImagePlus(image.getTitle()+"_watershed",binary_threshold_proc);
+        return new ImagePlus(nameImage+"_watershed",binary_threshold_proc);
     }
 
     /**
@@ -256,15 +255,15 @@ public class Detector {
      * @param toAdd : suffix to add
      */
     public void renameImage(ImagePlus imageToRename, String toAdd){
-        int lastPoint = name_image.lastIndexOf("."); /*get position of last point*/
+        int lastPoint = nameImage.lastIndexOf("."); /*get position of last point*/
         String getTitleWOExtension;
         String extension;
         if (lastPoint != -1){ /*a point is present in the string*/
-            getTitleWOExtension = name_image.substring(0,lastPoint);
-            extension = name_image.substring(lastPoint);
+            getTitleWOExtension = nameImage.substring(0,lastPoint);
+            extension = nameImage.substring(lastPoint);
             imageToRename.setTitle(getTitleWOExtension +"_"+toAdd+extension);
         }else { /*no extension to add*/
-            imageToRename.setTitle(name_image+"_"+toAdd);
+            imageToRename.setTitle(nameImage +"_"+toAdd);
         }
     }
 
@@ -276,34 +275,58 @@ public class Detector {
      * @param customMeasures : ResultTable that will contain the final results
      * @param nucleus : line number of the nucleus for which the results have to be customized
      */
-    public void setResultsAndRename(ResultsTable rawMeasures, ResultsTable customMeasures, int nucleus) {
+    public void setResultsAndRename(ResultsTable rawMeasures, ResultsTable customMeasures, int nucleus, String preNameColumn) {
         for (String measure : rawMeasures.getHeadings()){
             if (measure.equals("Area")){
-                customMeasures.addValue(name_object +" "+measure+" (pixel)", d2s(rawMeasures.getValue(measure, nucleus)));
-                customMeasures.addValue(name_object +" "+measure+" ("+ measureCalibration.getUnit()+")", d2s(rawMeasures.getValue("Area", nucleus)* measureCalibration.getPixelArea()));
-            }else if (measure.equals("IntDen")){
-                continue;
-            }else{
-                customMeasures.addValue(name_object +" "+measure,d2s(rawMeasures.getValue(measure, nucleus)));
+                if (nucleus == -1){
+                    customMeasures.addValue(preNameColumn +" "+measure+" (pixel)", Double.NaN);
+                    customMeasures.addValue(preNameColumn +" "+measure+" ("+ measureCalibration.getUnit()+")", Double.NaN);
+                }else {
+                    customMeasures.addValue(preNameColumn +" "+measure+" (pixel)", d2s(rawMeasures.getValue(measure, nucleus)));
+                    customMeasures.addValue(preNameColumn +" "+measure+" ("+ measureCalibration.getUnit()+")", d2s(rawMeasures.getValue("Area", nucleus)* measureCalibration.getPixelArea()));
+                }
+            }else if (!measure.equals("IntDen")){
+//                String test2 = d2s(rawMeasures.getValue(measure,nucleus));
+                if (nucleus == -1){
+                    customMeasures.addValue(preNameColumn +" "+measure,Double.NaN);
+                }else {
+                    customMeasures.addValue(preNameColumn +" "+measure,d2s(rawMeasures.getValue(measure, nucleus)));
+                }
             }
         }
     }
 
+    public void setNullResultsAndRename(ResultsTable rawMeasures, ResultsTable customMeasures, String preNameColumn) {
+        for (String measure : rawMeasures.getHeadings()){
+            if (measure.equals("Area")){
+                customMeasures.addValue(preNameColumn +" "+measure+" (pixel)", d2s(0));
+                customMeasures.addValue(preNameColumn +" "+measure+" ("+ measureCalibration.getUnit()+")", d2s(0));
+            }else if (measure.equals("IntDen")){
+                continue;
+            }else{
+//                String test2 = d2s(rawMeasures.getValue(measure,nucleus));
+                customMeasures.addValue(preNameColumn +" "+measure,d2s(0));
+            }
+        }
+    }
     /**
      * Summarize results : from an entire ResultsTable create one line for another resultTable
      * For area, adding of with calibration column
      * Removal of IntDen column (RawIntDen is equal)
      * Differenciation between mean of mean and arithmetic mean
      * RawIntDen and Area are summed, the other use means
-     * @param rawMeasures : ResultTable with measures of all spots not summarized
+     *
+     * @param rawMeasures    : ResultTable with measures of all spots not summarized
      * @param customMeasures : ResultTable that will contain the summarized results
+     * @param prenameColumn : prefixe for column
      */
-    public void setSummarizedResults(ResultsTable rawMeasures, ResultsTable customMeasures) {
+    public void setSummarizedResults(ResultsTable rawMeasures, ResultsTable customMeasures, String prenameColumn) {
         for (String measure : rawMeasures.getHeadings()){
             switch (measure) {
                 case "Area":
-                    customMeasures.addValue(name_object + " threshold "+ measure + " (pixel)", d2s(sum(rawMeasures.getColumn(measure))));
-                    customMeasures.addValue(name_object + " threshold "+ measure + " (" + measureCalibration.getUnit() + ")", d2s(sum(rawMeasures.getColumn(measure)) * measureCalibration.getPixelArea()));
+                    double sumArea = sum(rawMeasures.getColumn(measure));
+                    customMeasures.addValue(prenameColumn + " threshold "+ measure + " (pixel)", d2s(sumArea));
+                    customMeasures.addValue(prenameColumn + " threshold "+ measure + " (" + measureCalibration.getUnit() + ")", d2s(sumArea * measureCalibration.getPixelArea()));
                     break;
                 case "IntDen":
                     continue;
@@ -311,14 +334,14 @@ public class Detector {
 //                    customMeasures.addValue(name_object + "threshold Mean of " + measure, d2s(mean(rawMeasures.getColumn(measure))));
                     break;
                 case "RawIntDen":
-                    customMeasures.addValue(name_object+ " threshold "+ measure,d2s(sum(rawMeasures.getColumn(measure))));
+                    customMeasures.addValue(prenameColumn + " threshold "+ measure,d2s(sum(rawMeasures.getColumn(measure))));
                 default:
-                    customMeasures.addValue(name_object + " threshold "+ measure, d2s(mean(rawMeasures.getColumn(measure))));
+                    customMeasures.addValue(prenameColumn + " threshold "+ measure, d2s(mean(rawMeasures.getColumn(measure))));
                     break;
             }
         }
         /*Arithmetic mean*/
-        customMeasures.addValue(name_object+ " threshold Mean",d2s(sum(rawMeasures.getColumn("RawIntDen"))/sum(rawMeasures.getColumn("Area"))));
+        customMeasures.addValue(prenameColumn + " threshold Mean",d2s(sum(rawMeasures.getColumn("RawIntDen"))/sum(rawMeasures.getColumn("Area"))));
     }
 
     /**
@@ -340,7 +363,8 @@ public class Detector {
      */
     public static void main(String[] args) {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        Detector detector = new Detector(DAPI,"Nucleus",new MeasureCalibration());
+        Detector detector = new Detector(DAPI,"Nucleus");
+        detector.setMeasureCalibration(new MeasureCalibration());
         detector.setzStackParameters("Maximum projection",0,DAPI.getNSlices());
         detector.setThresholdParameters("Li",true,1000);
         ImagePlus test = detector.getThresholdMask(detector.getImage());

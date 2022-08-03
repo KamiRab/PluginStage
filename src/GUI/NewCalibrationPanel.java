@@ -30,7 +30,7 @@ public class NewCalibrationPanel extends JFrame {
         addButton.addActionListener(e -> {
 //            Verification that all fields are filled
             if (addNameField.getText().length() > 0 && addValueField.getText().length() > 0 && addUnitField.getText().length() > 0) {
-//                Verification that the name does not already exists
+//                Verification that the name does not already exist
                 boolean nameAlreadyExists = false;
                 for (int row = 0; row < tableModel.getRowCount(); row++) {
                     if (addNameField.getText().equals(tableModel.getValueAt(row, 0))) {

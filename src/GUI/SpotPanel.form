@@ -3,7 +3,7 @@
   <grid id="27dc6" binding="mainPanel" layout-manager="GridLayoutManager" row-count="4" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="731" height="596"/>
+      <xy x="20" y="20" width="731" height="652"/>
     </constraints>
     <properties/>
     <border type="none" title=""/>
@@ -79,7 +79,7 @@
             </constraints>
             <properties>
               <selected value="true"/>
-              <text value="Is a z-stack ?"/>
+              <text value="Is a Z-stack ?"/>
             </properties>
           </component>
           <component id="96b43" class="javax.swing.JCheckBox" binding="useAMacroCheckBox" default-binding="true">
@@ -149,7 +149,7 @@
               </component>
             </children>
           </grid>
-          <grid id="ecb1b" binding="macroPannel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+          <grid id="ecb1b" binding="macroPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
             <margin top="0" left="0" bottom="0" right="0"/>
             <constraints>
               <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -218,7 +218,9 @@
               <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
+              <enabled value="true"/>
               <text value="Show preprocessing image"/>
+              <toolTipText value="Warning ! Process will pause after each set of images' measurement"/>
             </properties>
           </component>
         </children>
@@ -239,7 +241,7 @@
               <text value="Preview"/>
             </properties>
           </component>
-          <grid id="d217f" binding="choiceMethodPanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+          <grid id="d217f" binding="choiceMethodPanel" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
             <margin top="0" left="0" bottom="0" right="0"/>
             <constraints>
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -247,7 +249,7 @@
             <properties/>
             <border type="none" title="Spot detection method"/>
             <children>
-              <grid id="6ad9d" binding="maximaPanel" layout-manager="GridLayoutManager" row-count="3" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="6ad9d" binding="maximaPanel" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -269,33 +271,9 @@
                     </constraints>
                     <properties/>
                   </component>
-                  <component id="373c7" class="javax.swing.JCheckBox" binding="showMaximaImageCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Show maxima image"/>
-                    </properties>
-                  </component>
-                  <component id="4cc81" class="javax.swing.JCheckBox" binding="saveMaximaImageCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Save maxima image"/>
-                    </properties>
-                  </component>
-                  <component id="33de" class="javax.swing.JCheckBox" binding="saveMaximaROIsCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="2" column="0" row-span="1" col-span="3" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Save maxima ROIs"/>
-                    </properties>
-                  </component>
                 </children>
               </grid>
-              <grid id="457c7" binding="thresholdPanel" layout-manager="GridLayoutManager" row-count="4" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="457c7" binding="thresholdPanel" layout-manager="GridLayoutManager" row-count="2" column-count="4" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -325,17 +303,9 @@
                       <text value="Threshold Method"/>
                     </properties>
                   </component>
-                  <component id="bdf04" class="javax.swing.JCheckBox" binding="showBinaryMaskCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Show binary mask"/>
-                    </properties>
-                  </component>
                   <component id="649cc" class="javax.swing.JComboBox" binding="threshMethodsCombo" custom-create="true">
                     <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                      <grid row="0" column="1" row-span="1" col-span="3" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="-1"/>
                       </grid>
                     </constraints>
@@ -343,26 +313,10 @@
                   </component>
                   <component id="96797" class="javax.swing.JCheckBox" binding="useWatershedCheckBox" default-binding="true">
                     <constraints>
-                      <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                      <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
                       <text value="Use watershed"/>
-                    </properties>
-                  </component>
-                  <component id="6dca2" class="javax.swing.JCheckBox" binding="saveThresholdROIsCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="3" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Save threshold ROIs"/>
-                    </properties>
-                  </component>
-                  <component id="8f4af" class="javax.swing.JCheckBox" binding="saveBinaryMaskCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="3" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Save segmentation mask"/>
                     </properties>
                   </component>
                 </children>
@@ -385,6 +339,41 @@
                   <text value="Threshold"/>
                 </properties>
               </component>
+              <grid id="bd039" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints>
+                  <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="33de" class="javax.swing.JCheckBox" binding="saveROIsCheckBox">
+                    <constraints>
+                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save ROIs"/>
+                    </properties>
+                  </component>
+                  <component id="373c7" class="javax.swing.JCheckBox" binding="showImageCheckBox">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Show image(s)"/>
+                      <toolTipText value="Warning ! Process will pause after each set of images' measurement"/>
+                    </properties>
+                  </component>
+                  <component id="4cc81" class="javax.swing.JCheckBox" binding="saveImageCheckBox">
+                    <constraints>
+                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Save image(s)"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
             </children>
           </grid>
         </children>

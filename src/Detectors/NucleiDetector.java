@@ -1,36 +1,36 @@
 package Detectors;
 
-import GUI.PluginCellProt;
 import Helpers.MeasureCalibration;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.Roi;
 import ij.gui.WaitForUserDialog;
-import ij.measure.Measurements;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.Analyzer;
 import ij.plugin.frame.RoiManager;
-
+//TODO process interrupted appears too much
+//Final results appears after interruption ? TODO
 // TODO garder paramétres utilisé dans fichier : aire,moyenne intensité et somme intensité (+ options mesures morphologiques)
 //Final validation cellpose TODO
 //TODO cellpose exclude on edge
 //TODO attention ordre rolling ball + checkbox
 public class NucleiDetector {
     private final ImagePlus image; /*Original image*/
+    private final ResultsTable rawMesures;
+    private Analyzer analyzer;
     private ImagePlus imageToMeasure; /*Projected or not image, that will be the one measured*/
     private ImagePlus imageToParticleAnalyze; /*Binary mask that particle analyzer use to count and return the ROIs*/
-    private final String name_experiment; /*Name of experiment (common with spot images)*/
+    private final String nameExperiment; /*Name of experiment (common with spot images)*/
     private final Detector detector; /*Helper class that do the projection, thresholding and particle analyzer that are common with the spots*/
     private final String resultsDirectory; /*Directory to save results if necessary*/
     private final boolean showPreprocessingImage; /*Display or not the images (projection and binary)*/
     private boolean deeplearning; /*use deeplearning, if false use thresholding*/
     private int minSizeDLNuclei;
     private String cellposeModel;
-    private boolean useWatershed; /*TODO*/
+    private boolean useWatershed;
     private Roi[] nucleiRois;
-    private Analyzer analyzer;
-    private ResultsTable rawMesures;
+    //    private ResultsTable rawMesures;
     private boolean finalValidation;
     private boolean useMacro;
     private String macroText;
@@ -38,26 +38,76 @@ public class NucleiDetector {
     private boolean saveMask;
     private boolean saveRois;
     private boolean showBinaryImage;
+    private int measurements;
 
     //TODO measures
     /**
      * Constructor with basic parameters, the other are initialized only if needed
      * @param image image to analyze
-     * @param name_experiment name without channel
-     * @param measureCalibration : calibration to use for ResultTable
+     * @param nameExperiment name without channel
      * @param resultsDir : directory for saving results
      * @param showPreprocessingImage : display or not of the images
      */
-    public NucleiDetector(ImagePlus image, String name_experiment, MeasureCalibration measureCalibration, String resultsDir, boolean showPreprocessingImage) {
+    public NucleiDetector(ImagePlus image, String nameExperiment, String resultsDir, boolean showPreprocessingImage) {
         this.image = image;
         this.resultsDirectory =resultsDir;
         this.showPreprocessingImage =showPreprocessingImage;
-        if (name_experiment.endsWith("_")){
-            this.name_experiment = name_experiment.substring(0,name_experiment.length()-1);
+        if (nameExperiment.endsWith("_")){
+            this.nameExperiment = nameExperiment.substring(0,nameExperiment.length()-1);
         }else {
-            this.name_experiment=name_experiment;
+            this.nameExperiment =nameExperiment;
         }
-        detector = new Detector(image, "Nucleus", measureCalibration);
+        detector = new Detector(image, "Nucleus");
+        rawMesures = new ResultsTable();
+        /*precise mesures à faire et image sur laquelle faire*/
+
+    }
+
+    public void setNucleiAssociatedRois(Roi[] associatedToCellNucleisRois){
+        this.nucleiRois=associatedToCellNucleisRois;
+        if (associatedToCellNucleisRois.length>0){
+            if (resultsDirectory!=null && saveRois) {
+                RoiManager roiManager = RoiManager.getInstance();
+                if (roiManager == null) { /*if no instance of roiManager, creates one*/
+                    roiManager = new RoiManager();
+                } else { /*if already exists, empties it*/
+                    roiManager.reset();
+                }
+                for (int i = 0; i < associatedToCellNucleisRois.length; i++) {
+                    Roi roi = associatedToCellNucleisRois[i];
+                    if (roi!=null){
+                        roi.setName("Nuclei_Cell_"+(i+1));
+                        roiManager.addRoi(roi);
+                    }
+                }
+                if(roiManager.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle()  +"_nucleus_associatedToCell_roi.zip")){
+                    IJ.log("The nuclei ROIs of "+image.getTitle() + " were saved in "+ resultsDirectory+"/Results/ROI/");
+                } else {
+                    IJ.log("The nuclei ROIs of "+image.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/ROI/");
+                }
+            }
+            else if (resultsDirectory==null && saveRois){
+                IJ.error("No directory given for the results");
+            }
+            if (resultsDirectory!=null && saveMask){
+                ImagePlus nucleiLabeledMask = detector.labeledImage(associatedToCellNucleisRois);
+                if (IJ.saveAsTiff(nucleiLabeledMask, resultsDirectory + "/Results/Images/AssociatedToCell" + nucleiLabeledMask.getTitle())) {
+                    IJ.log("The binary mask " + nucleiLabeledMask.getTitle() + " was saved in " + resultsDirectory + "/Results/Images/");
+                } else {
+                    IJ.log("The binary mask " + nucleiLabeledMask.getTitle() + " could not be saved in " + resultsDirectory + "/Results/Images/");
+                }
+            }
+        }else {
+            IJ.log("No nucleis were associated to a cell");
+        }
+    }
+
+    /**
+     *
+     * @param measureCalibration Calibration value and unit to use for measurements
+     */
+    public void setMeasureCalibration(MeasureCalibration measureCalibration){
+        detector.setMeasureCalibration(measureCalibration);
     }
 
     /**
@@ -160,7 +210,7 @@ public class NucleiDetector {
      * - show result labeled image
      */
     public void preview(){
-        int[] idsToKeep = WindowManager.getIDList();
+//        int[] idsToKeep = WindowManager.getIDList();
         ImagePlus preprocessed = getPreprocessing();
         if (preprocessed!=null){
             preprocessed.show();
@@ -177,7 +227,7 @@ public class NucleiDetector {
             } else {
                 thresholding(preprocessed);
             }
-            PluginCellProt.closeAllWindows("Preview is done",idsToKeep);
+//            PluginCellProt.closeAllWindows("Preview is done",idsToKeep);
         }
     }
 
@@ -193,19 +243,25 @@ public class NucleiDetector {
      */
     public boolean prepare(){
 //        PREPROCESSING
+
         ImagePlus preprocessed = getPreprocessing();
         if (preprocessed!=null){ /*if no error during preprocessing*/
+            if (showPreprocessingImage){
+                preprocessed.show();
+            }
             RoiManager roiManagerNuclei;
             ImagePlus labeledImage;
+            String analysisType;
 //            SEGMENTATION
             if (deeplearning){
+                analysisType = "cellpose";
                 Cellpose cellpose = new Cellpose(preprocessed,minSizeDLNuclei, cellposeModel, excludeOnEdges);
                 cellpose.analysis();
                 labeledImage = cellpose.getCellposeOutput();
                 detector.renameImage(labeledImage,"cellpose");
-                if (showBinaryImage)  cellpose.getCellposeOutput().show();
                 roiManagerNuclei =cellpose.getCellposeRoiManager();
             } else {
+                analysisType = "threshold";
                 thresholding(preprocessed);
                 // Analyse particle
                 roiManagerNuclei =detector.analyzeParticles(imageToParticleAnalyze);
@@ -213,6 +269,8 @@ public class NucleiDetector {
             }
             if (showBinaryImage){
                 labeledImage.show();
+                labeledImage.setDisplayRange(0,roiManagerNuclei.getCount()+5);
+                labeledImage.updateAndDraw();
             }
 //            User can redefine ROIs if option selected
             if (finalValidation){
@@ -230,28 +288,29 @@ public class NucleiDetector {
                 labeledImage = detector.labeledImage(roiManagerNuclei.getRoisAsArray());
             }
             if (resultsDirectory !=null && saveMask){
+                detector.renameImage(labeledImage,analysisType+"_labeledMask");
                 if(IJ.saveAsTiff(labeledImage, resultsDirectory +"/Results/Images/"+labeledImage.getTitle())){
                     IJ.log("The segmentation mask "+labeledImage.getTitle() + " was saved in "+ resultsDirectory+"/Results/Images/");
                 } else {
                     IJ.log("The segmentation mask "+labeledImage.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/Images/");
                 }
-            }else if (resultsDirectory==null){
+            }else if (resultsDirectory==null && saveMask){
                 IJ.error("No directory given for the results");
             }
 
             if (resultsDirectory!=null && saveRois) {
-                if(roiManagerNuclei.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + "_nucleus_threshold_roi.zip")){
+                if(roiManagerNuclei.save(resultsDirectory +"/Results/ROI/"+ image.getShortTitle() + analysisType +"_nucleus_threshold_roi.zip")){
                     IJ.log("The nuclei ROIs of "+image.getTitle() + " were saved in "+ resultsDirectory+"/Results/ROI/");
                 } else {
                     IJ.log("The nuclei ROIs of "+image.getTitle() + " could not be saved in "+ resultsDirectory+"/Results/ROI/");
                 }
             }
-            else if (resultsDirectory==null){
+            else if (resultsDirectory==null && saveRois){
                 IJ.error("No directory given for the results");
             }
-            this.rawMesures = new ResultsTable();
+//            analyzer = new Analyzer(imageToMeasure, Measurements.MEAN + Measurements.AREA + Measurements.INTEGRATED_DENSITY, rawMesures);
+            analyzer = new Analyzer(imageToMeasure, measurements, rawMesures);
             nucleiRois = roiManagerNuclei.getRoisAsArray();
-            analyzer = new Analyzer(imageToMeasure, Measurements.MEAN + Measurements.AREA+Measurements.INTEGRATED_DENSITY, rawMesures); /*precise mesures à faire et image sur laquelle faire*/
             return true;
         }else return false;
     }
@@ -261,10 +320,18 @@ public class NucleiDetector {
      * @param nucleus : index of the nucleus to analyze
      * @param resultsTableFinal : resultTable to fill
      */
-    public void measureEachNuclei(int nucleus,ResultsTable resultsTableFinal) {
-        imageToMeasure.setRoi(nucleiRois[nucleus]);
-        analyzer.measure();
-        detector.setResultsAndRename(rawMesures,resultsTableFinal,nucleus);
+    public void measureEachNuclei(int nucleus,ResultsTable resultsTableFinal, Roi nucleusRoi) {
+//        if (nucleiRois[nucleus]!=null){
+        if (nucleusRoi!=null){
+//            imageToMeasure.setRoi(nucleiRois[nucleus]);
+            imageToMeasure.setRoi(nucleusRoi);
+            analyzer.measure();
+            detector.setResultsAndRename(rawMesures,resultsTableFinal,nucleus,"Nuclei");
+        }else {
+            imageToMeasure.setRoi((Roi) null);
+            analyzer.measure();
+            detector.setNullResultsAndRename(rawMesures,resultsTableFinal,"Nuclei");
+        }
     }
 
     /**
@@ -288,7 +355,7 @@ public class NucleiDetector {
             }
             imageToParticleAnalyze = watersheded_mask;
         }else {
-            imageToParticleAnalyze = mask_IP.duplicate();
+            imageToParticleAnalyze = mask_IP;
         }
     }
 
@@ -296,22 +363,22 @@ public class NucleiDetector {
         if (detector.getImage()!=null){
             IJ.run("Options...","iterations=1 count=1 black");
 //        PROJECTION : convert stack to one image
-            this.imageToMeasure = detector.getImage(); /*detector class does the projection if needed*/
-            if (showPreprocessingImage){
-                this.imageToMeasure.show(); /*show image that will be measured*/
-            }
+            imageToMeasure = detector.getImage();
+            ImagePlus imageToReturn = detector.getImage().duplicate(); /*detector class does the projection if needed*/
+            ImagePlus temp;
 //      MACRO : apply custom commands of user
             if (useMacro){
-                imageToMeasure.show();
-                IJ.selectWindow(imageToMeasure.getID());
+                imageToReturn.show();
+                IJ.selectWindow(imageToReturn.getID());
                 IJ.runMacro("setBatchMode(true);"+macroText+"setBatchMode(false);");
-                imageToMeasure = WindowManager.getCurrentImage();
-                imageToMeasure.changes=false;
-                imageToMeasure.close();
+                temp = WindowManager.getCurrentImage();
+                imageToReturn = temp.duplicate();
+                temp.changes=false;
+                temp.close();
             }
 //         MEDIAN FILTER : reduce noise
             //        new RankFilters().rank(filteredProjection.getProcessor(),5,RankFilters.MEDIAN);
-            return imageToMeasure.duplicate();
+            return imageToReturn;
         }else return null;
     }
 
@@ -320,16 +387,21 @@ public class NucleiDetector {
      * @return TODO
      */
     public String getNameExperiment() {
-        return name_experiment;
+        return nameExperiment;
     }
 
     public static void main(String[] args) {
         ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        NucleiDetector nucleiDetector = new NucleiDetector(DAPI,"WT_HU_Ac-2re--cell003",new MeasureCalibration(),"C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);
+        NucleiDetector nucleiDetector = new NucleiDetector(DAPI,"WT_HU_Ac-2re--cell003","C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);
         nucleiDetector.setzStackParameters("Maximum projection");
+        nucleiDetector.setMeasureCalibration(new MeasureCalibration());
         nucleiDetector.setSegmentation(false,true);
         nucleiDetector.setDeeplearning(200,"cyto",true);
 //        nucleiDetector.setThresholdMethod("Li",1000,false,true,false);
         nucleiDetector.prepare();
+    }
+
+    public void setMeasurements(int measurements) {
+        this.measurements = measurements;
     }
 }

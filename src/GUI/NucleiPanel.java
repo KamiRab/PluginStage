@@ -1,7 +1,6 @@
 package GUI;
 
 import Detectors.NucleiDetector;
-import Helpers.MeasureCalibration;
 import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -15,11 +14,14 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class NucleiPanel extends JPanel {
+    private final boolean fromDirectory;
+    private File cellposeModelPath;
     //    GUI
     private JPanel mainPanel;
     private JButton previewButton;
@@ -81,28 +83,29 @@ public class NucleiPanel extends JPanel {
     private JCheckBox saveNucleiROIsCheckBox;
     private JCheckBox saveSegmentationMaskCheckBox;
     private JCheckBox showPreprocessingImageCheckBox;
+    private JPanel ownModelPanel;
+    private JLabel modelPathLabel;
+    private JTextField modelPathField;
+    private JButton modelBrowseButton;
 
     //    NON GUI
-    private final MeasureCalibration measureCalibration;
     private final ImageToAnalyze[] imagesNames;
     private final DefaultListModel<ImageToAnalyze> imageListModel = new DefaultListModel<>();
     private boolean filteredImages;
+    private int measurements;
 //    private final boolean showImage;
 
 //    TODO attention message d'erreur si mauvaise concordance
 //    TODO get Last substring index
-//    TODO faire finalValidation (selection noyau + coupe noyau)
 
 //    CONSTRUCTOR
 
     /**
-     * @param imageNames         : all images to analyze
-     * @param measureCalibration : calibration to use
-     *                           //     * @param showImage          : display or not the images
+     * @param imageNames : all images to analyze
      */
-    public NucleiPanel(ImageToAnalyze[] imageNames, MeasureCalibration measureCalibration) {
+    public NucleiPanel(ImageToAnalyze[] imageNames, boolean fromDirectory) {
+        this.fromDirectory = fromDirectory;
         $$$setupUI$$$();
-        this.measureCalibration = measureCalibration;
         this.imagesNames = imageNames;
         getPreferences();
         //        List of images (filter)
@@ -131,6 +134,25 @@ public class NucleiPanel extends JPanel {
         cellPoseRadioButton.addItemListener(e -> {
             cellPosePanel.setVisible(e.getStateChange() == ItemEvent.SELECTED);
             thresholdingParametersPanel.setVisible(e.getStateChange() == ItemEvent.DESELECTED);
+        });
+        cellPoseModelCombo.addItemListener(e -> {
+            String modelSelected = (String) cellPoseModelCombo.getSelectedItem();
+            ownModelPanel.setVisible(modelSelected.equals("own_model"));
+        });
+        modelBrowseButton.addActionListener(e -> {
+            cellposeModelPath = CytoCellPanel.chooseFile(this.mainPanel);
+            if (cellposeModelPath != null) {
+                String path = cellposeModelPath.getAbsolutePath();
+                if (path.split("\\\\").length > 2) {
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
+                    modelPathField.setText("..." + path_shorten);
+                } else if (path.split("/").length > 2) {
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("/")).lastIndexOf("/"));
+                    modelPathField.setText("..." + path_shorten);
+                } else {
+                    modelPathField.setText(path);
+                }
+            }
         });
 //        PREVIEW : on the selected image
         previewButton.addActionListener(e -> {
@@ -179,9 +201,10 @@ public class NucleiPanel extends JPanel {
     private NucleiDetector getNucleiDetector(ImageToAnalyze imageToAnalyze, String nameExperiment, boolean isPreview) {
         NucleiDetector nucleiDetector;
         if (isPreview) {
-            nucleiDetector = new NucleiDetector(imageToAnalyze.getImagePlus(), nameExperiment, measureCalibration, null, true);
+            nucleiDetector = new NucleiDetector(imageToAnalyze.getImagePlus(), nameExperiment, null, true);
         } else {
-            nucleiDetector = new NucleiDetector(imageToAnalyze.getImagePlus(), nameExperiment, measureCalibration, imageToAnalyze.getDirectory(), showPreprocessingImageCheckBox.isSelected());
+            nucleiDetector = new NucleiDetector(imageToAnalyze.getImagePlus(), nameExperiment, imageToAnalyze.getDirectory(), showPreprocessingImageCheckBox.isSelected());
+            nucleiDetector.setMeasurements(measurements);
         }
         if (isAZStackCheckBox.isSelected()) {
             if (chooseSlicesToUseCheckBox.isSelected()) {
@@ -190,9 +213,12 @@ public class NucleiPanel extends JPanel {
                 nucleiDetector.setzStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
             }
         }
-        nucleiDetector.setSegmentation(finalValidationCheckBox.isSelected(),showBinaryMaskCheckBox.isSelected());
+        nucleiDetector.setSegmentation(finalValidationCheckBox.isSelected(), isPreview || showBinaryMaskCheckBox.isSelected());
         if (cellPoseRadioButton.isSelected()) {
-            nucleiDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()), excludeOnEdges.isSelected());
+            String cellposeModel = cellPoseModelCombo.getSelectedItem() == "own_model" ? cellposeModelPath.getAbsolutePath() : (String) cellPoseModelCombo.getSelectedItem();
+            nucleiDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellposeModel, excludeOnEdges.isSelected());
+
+//            nucleiDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()), excludeOnEdges.isSelected());
         } else {
             nucleiDetector.setThresholdMethod(threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()), (Double) minSizeNucleusSpinner.getValue(), useWatershedCheckBox.isSelected(), excludeOnEdges.isSelected());
         }
@@ -209,7 +235,7 @@ public class NucleiPanel extends JPanel {
         return mainPanel;
     }
 
-    public ArrayList<NucleiDetector> getImages() {
+    public ArrayList<NucleiDetector> getImages(boolean parametersToAdd) {
         ArrayList<NucleiDetector> nuclei = new ArrayList<>();
         ImageToAnalyze image;
         String nameExperiment;
@@ -217,7 +243,9 @@ public class NucleiPanel extends JPanel {
             IJ.error("No images given for nuclei. Please verify the image ending corresponds to at least an image.");
             return null;
         } else {
-            addParametersToFile();
+            if (parametersToAdd) {
+                addParametersToFile();
+            }
             for (int i = 0; i < imageListModel.getSize(); i++) {
                 image = imageListModel.getElementAt(i);
                 nameExperiment = getNameExperiment(image);
@@ -277,7 +305,7 @@ public class NucleiPanel extends JPanel {
         mainPanel.setLayout(new GridLayoutManager(7, 1, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.setBorder(BorderFactory.createTitledBorder(null, "Detect nuclei", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         thresholdingParametersPanel = new JPanel();
-        thresholdingParametersPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
+        thresholdingParametersPanel.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(thresholdingParametersPanel, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         thresholdingParametersPanel.setBorder(BorderFactory.createTitledBorder(null, "Thresholding parameters", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         threshMethodsLabel = new JLabel();
@@ -287,13 +315,10 @@ public class NucleiPanel extends JPanel {
         minSizeNucleusLabel.setText("Minimum size of nucleus");
         thresholdingParametersPanel.add(minSizeNucleusLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         thresholdingParametersPanel.add(minSizeNucleusSpinner, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        thresholdingParametersPanel.add(threshMethodsCombo, new GridConstraints(0, 1, 1, 3, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         useWatershedCheckBox = new JCheckBox();
         useWatershedCheckBox.setText("Use watershed");
-        thresholdingParametersPanel.add(useWatershedCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        thresholdingParametersPanel.add(threshMethodsCombo, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        finalValidationCheckBox = new JCheckBox();
-        finalValidationCheckBox.setText("Final validation");
-        thresholdingParametersPanel.add(finalValidationCheckBox, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        thresholdingParametersPanel.add(useWatershedCheckBox, new GridConstraints(1, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         chooseFilePanel = new JPanel();
         chooseFilePanel.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(chooseFilePanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -370,15 +395,16 @@ public class NucleiPanel extends JPanel {
         zProjPanel.add(spacer2, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 50), null, null, 0, false));
         showPreprocessingImageCheckBox = new JCheckBox();
         showPreprocessingImageCheckBox.setText("Show preprocessing image");
+        showPreprocessingImageCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
         zProjPanel.add(showPreprocessingImageCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cellPosePanel = new JPanel();
-        cellPosePanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        cellPosePanel.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(cellPosePanel, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         cellPosePanel.setBorder(BorderFactory.createTitledBorder(null, "Deep learning parameters", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        cellPosePanel.add(cellPoseMinDiameterSpinner, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        cellPosePanel.add(cellPoseMinDiameterSpinner, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cellPoseMinDiameterLabel = new JLabel();
         cellPoseMinDiameterLabel.setText("Minimum diameter of nuclei (pixel)");
-        cellPosePanel.add(cellPoseMinDiameterLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        cellPosePanel.add(cellPoseMinDiameterLabel, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cellPoseModelLabel = new JLabel();
         cellPoseModelLabel.setText("Model for Cellpose");
         cellPosePanel.add(cellPoseModelLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -387,17 +413,28 @@ public class NucleiPanel extends JPanel {
         defaultComboBoxModel2.addElement("nuclei");
         defaultComboBoxModel2.addElement("cyto");
         defaultComboBoxModel2.addElement("cyto2");
-        defaultComboBoxModel2.addElement("cyto2_omni");
         defaultComboBoxModel2.addElement("bact_omni");
         defaultComboBoxModel2.addElement("tissuenet");
         defaultComboBoxModel2.addElement("livecell");
+        defaultComboBoxModel2.addElement("own_model");
         cellPoseModelCombo.setModel(defaultComboBoxModel2);
         cellPosePanel.add(cellPoseModelCombo, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ownModelPanel = new JPanel();
+        ownModelPanel.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        cellPosePanel.add(ownModelPanel, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        modelPathLabel = new JLabel();
+        modelPathLabel.setText("Path own model");
+        ownModelPanel.add(modelPathLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        modelPathField = new JTextField();
+        ownModelPanel.add(modelPathField, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        modelBrowseButton = new JButton();
+        modelBrowseButton.setText("Browse");
+        ownModelPanel.add(modelBrowseButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         previewButton = new JButton();
         previewButton.setText("Preview");
         mainPanel.add(previewButton, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         commonParameters = new JPanel();
-        commonParameters.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        commonParameters.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(commonParameters, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         excludeOnEdges = new JCheckBox();
         excludeOnEdges.setSelected(true);
@@ -405,13 +442,21 @@ public class NucleiPanel extends JPanel {
         commonParameters.add(excludeOnEdges, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         showBinaryMaskCheckBox = new JCheckBox();
         showBinaryMaskCheckBox.setText("Show segmentation mask");
-        commonParameters.add(showBinaryMaskCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        showBinaryMaskCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
+        commonParameters.add(showBinaryMaskCheckBox, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        finalValidationCheckBox = new JCheckBox();
+        finalValidationCheckBox.setText("Final validation");
+        commonParameters.add(finalValidationCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         saveNucleiROIsCheckBox = new JCheckBox();
-        saveNucleiROIsCheckBox.setText("Save nuclei ROIs");
+        saveNucleiROIsCheckBox.setText("Save ROIs");
         commonParameters.add(saveNucleiROIsCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         saveSegmentationMaskCheckBox = new JCheckBox();
         saveSegmentationMaskCheckBox.setText("Save segmentation mask");
-        commonParameters.add(saveSegmentationMaskCheckBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        commonParameters.add(saveSegmentationMaskCheckBox, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        threshMethodsLabel.setLabelFor(threshMethodsCombo);
+        minSizeNucleusLabel.setLabelFor(minSizeNucleusSpinner);
+        cellPoseMinDiameterLabel.setLabelFor(cellPoseMinDiameterSpinner);
+        cellPoseModelLabel.setLabelFor(cellPoseModelCombo);
         ButtonGroup buttonGroup;
         buttonGroup = new ButtonGroup();
         buttonGroup.add(thresholdRadioButton);
@@ -434,8 +479,8 @@ public class NucleiPanel extends JPanel {
         threshMethodsCombo = new JComboBox<>(AutoThresholder.getMethods());
 
 // minSize spinner
-        minSizeNucleusSpinner = new JSpinner(new SpinnerNumberModel(1000.0, 0.0, Integer.MAX_VALUE, 100.0));
-        cellPoseMinDiameterSpinner = new JSpinner(new SpinnerNumberModel(200, 0, Integer.MAX_VALUE, 100));
+        minSizeNucleusSpinner = new JSpinner(new SpinnerNumberModel(1000.0, 0.0, Integer.MAX_VALUE, 10.0));
+        cellPoseMinDiameterSpinner = new JSpinner(new SpinnerNumberModel(200, 0, Integer.MAX_VALUE, 10));
 
 //  Text field to filter extension
         imageEndingField = new JTextField(15);
@@ -444,54 +489,104 @@ public class NucleiPanel extends JPanel {
     }
 
     private void getPreferences() {
-        imageEndingField.setText(Prefs.get("PluginToName.nucleusEnding", "_w31 DAPI 405"));
-        isAZStackCheckBox.setSelected(Prefs.get("PluginToName.zStackNucleus", true));
-        zProjMethodsCombo.setSelectedItem(Prefs.get("PluginToName.ProjMethodsNucleus", "Maximum projection"));
-        chooseSlicesToUseCheckBox.setSelected(Prefs.get("PluginToName.chooseSlidesNucleus", false));
+//        Name
+        imageEndingField.setText(Prefs.get("MICMAQ.nucleusEnding", "_w31 DAPI 405"));
+//        Projection
+        isAZStackCheckBox.setSelected(Prefs.get("MICMAQ.zStackNucleus", true));
+        zProjMethodsCombo.setSelectedItem(Prefs.get("MICMAQ.ProjMethodsNucleus", "Maximum projection"));
+        chooseSlicesToUseCheckBox.setSelected(Prefs.get("MICMAQ.chooseSlicesNucleus", false));
         if (!chooseSlicesToUseCheckBox.isSelected()) {
             slicesPanel.setVisible(false);
         }
-        firstSliceSpinner.setValue((int) Prefs.get("PluginToName.firstSliceNucleus", 1));
-        lastSliceSpinner.setValue((int) Prefs.get("PluginToName.lastSliceNucleus", imagesNames[0].getImagePlus().getNSlices()));
-        if ((Integer) firstSliceSpinner.getValue() > imagesNames[0].getImagePlus().getNSlices()) {
-            firstSliceSpinner.setValue(1);
-        }
-        if ((Integer) lastSliceSpinner.getValue() > imagesNames[0].getImagePlus().getNSlices()) {
-            lastSliceSpinner.setValue(1);
-        }
-        useAMacroCheckBox.setSelected(Prefs.get("PluginToName.useMacroNucleus", false));
+        int maxSlices = imagesNames[0].getImagePlus().getNSlices();
+        int firstSlice = (int) Prefs.get("MICMAQ.firstSliceNucleus", 1);
+        int lastSlice = (int) Prefs.get("MICMAQ.lastSliceNucleus", imagesNames[0].getImagePlus().getNSlices());
+        ImageToAnalyze.assertSlices(maxSlices, firstSlice, lastSlice, firstSliceSpinner, lastSliceSpinner);
+//        if ((Integer) firstSliceSpinner.getValue() > imagesNames[0].getImagePlus().getNSlices()) {
+//            firstSliceSpinner.setValue(1);
+//        }
+//        if ((Integer) lastSliceSpinner.getValue() > imagesNames[0].getImagePlus().getNSlices()) {
+//            lastSliceSpinner.setValue(1);
+//        }
+//        Macro
+        useAMacroCheckBox.setSelected(Prefs.get("MICMAQ.useMacroNucleus", false));
         if (!useAMacroCheckBox.isSelected()) macroPanel.setVisible(false);
-        macroArea.append(Prefs.get("PluginToName.macroNucleus", " ")); /*TODO default macro ?*/
-        cellPoseRadioButton.setSelected(Prefs.get("PluginToName.useDeepLearningNucleus", false));
+        macroArea.append(Prefs.get("MICMAQ.macroNucleus", " ")); /*TODO default macro ?*/
+
+//        Segmentation
+        cellPoseRadioButton.setSelected(Prefs.get("MICMAQ.useDeepLearningNucleus", false));
         if (cellPoseRadioButton.isSelected()) thresholdingParametersPanel.setVisible(false);
         else cellPosePanel.setVisible(false);
-        threshMethodsCombo.setSelectedItem(Prefs.get("PluginToName.thresholdMethodNucleus", "Li"));
-        minSizeNucleusSpinner.setValue(Prefs.get("PluginToName.minSizeNucleus", 1000));
-        useWatershedCheckBox.setSelected(Prefs.get("PluginToName.nucleiUseWaterShed", false));
-        excludeOnEdges.setSelected(Prefs.get("PluginToName.nucleusExcludeOnEdges", true));
-        cellPoseModelCombo.setSelectedItem(Prefs.get("PluginToName.cellposeNucleusMethods", "cyto2"));
-        cellPoseMinDiameterSpinner.setValue((int) Prefs.get("PluginToName.cellposeNucleusMinDiameter", 100));
-        finalValidationCheckBox.setSelected(Prefs.get("PluginToName.finalValidation", false));
-        showBinaryMaskCheckBox.setSelected(Prefs.get("PluginToName.nucleusShowMask", true));
+        excludeOnEdges.setSelected(Prefs.get("MICMAQ.nucleusExcludeOnEdges", true));
+        finalValidationCheckBox.setSelected(Prefs.get("MICMAQ.finalValidation", false));
+        saveSegmentationMaskCheckBox.setSelected(Prefs.get("MICMAQ.nucleusSaveMask", true));
+        saveNucleiROIsCheckBox.setSelected(Prefs.get("MICMAQ.nucleusSaveROI", true));
+//        --> threshold
+        threshMethodsCombo.setSelectedItem(Prefs.get("MICMAQ.thresholdMethodNucleus", "Li"));
+        minSizeNucleusSpinner.setValue(Prefs.get("MICMAQ.minSizeNucleus", 1000));
+        useWatershedCheckBox.setSelected(Prefs.get("MICMAQ.nucleiUseWaterShed", false));
+//        --> cellpose
+        cellPoseModelCombo.setSelectedItem(Prefs.get("MICMAQ.cellposeNucleusMethods", "cyto2"));
+        if (cellPoseModelCombo.getSelectedItem() != "own_model") {
+            ownModelPanel.setVisible(false);
+        }
+        cellPoseMinDiameterSpinner.setValue((int) Prefs.get("MICMAQ.cellposeNucleusMinDiameter", 100));
+
+//        Show images
+        if (fromDirectory) {
+            showPreprocessingImageCheckBox.setSelected(false);
+            showPreprocessingImageCheckBox.setVisible(false);
+            showBinaryMaskCheckBox.setSelected(false);
+            showBinaryMaskCheckBox.setVisible(false);
+        } else {
+            showPreprocessingImageCheckBox.setSelected(Prefs.get("MICMAQ.nucleusShowPrepro", true));
+            showBinaryMaskCheckBox.setSelected(Prefs.get("MICMAQ.nucleusShowMask", true));
+        }
     }
 
     public void setPreferences() {
-        Prefs.set("PluginToName.nucleusEnding", imageEndingField.getText());
-        Prefs.set("PluginToName.zStackNucleus", isAZStackCheckBox.isSelected());
-        Prefs.set("PluginToName.ProjMethodsNucleus", zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
-        Prefs.set("PluginToName.chooseSlidesNucleus", chooseSlicesToUseCheckBox.isSelected());
-        Prefs.set("PluginToName.firstSliceNucleus", (double) (int) firstSliceSpinner.getValue());
-        Prefs.set("PluginToName.lastSliceNucleus", (double) (int) lastSliceSpinner.getValue());
-        Prefs.set("PluginToName.useMacroNucleus", useAMacroCheckBox.isSelected());
-        Prefs.set("PluginToName.macroNucleus", macroArea.getText());
-        Prefs.set("PluginToName.useDeepLearningNucleus", cellPoseRadioButton.isSelected());
-        Prefs.set("PluginToName.thresholdMethodNucleus", threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()));
-        Prefs.set("PluginToName.minSizeNucleus", (double) minSizeNucleusSpinner.getValue());
-        Prefs.set("PluginToName.nucleiUseWaterShed", useWatershedCheckBox.isSelected());
-        Prefs.set("PluginToName.nucleusExcludeOnEdges", excludeOnEdges.isSelected());
-        Prefs.set("PluginToName.cellposeNucleusMethods", cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()));
-        Prefs.set("PluginToName.cellposeNucleusMinDiameter", (double) (int) cellPoseMinDiameterSpinner.getValue());
-        Prefs.set("PluginToName.finalValidation", finalValidationCheckBox.isSelected());
-        Prefs.set("PluginToName.nucleusShowMask", showBinaryMaskCheckBox.isSelected());
+//        Name
+        Prefs.set("MICMAQ.nucleusEnding", imageEndingField.getText());
+//        Projection
+        Prefs.set("MICMAQ.zStackNucleus", isAZStackCheckBox.isSelected());
+        if (isAZStackCheckBox.isSelected()) {
+            Prefs.set("MICMAQ.ProjMethodsNucleus", zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
+            Prefs.set("MICMAQ.chooseSlicesNucleus", chooseSlicesToUseCheckBox.isSelected());
+            if (chooseSlicesToUseCheckBox.isSelected()) {
+                Prefs.set("MICMAQ.firstSliceNucleus", (double) (int) firstSliceSpinner.getValue());
+                Prefs.set("MICMAQ.lastSliceNucleus", (double) (int) lastSliceSpinner.getValue());
+            }
+        }
+
+//        Macro
+        Prefs.set("MICMAQ.useMacroNucleus", useAMacroCheckBox.isSelected());
+        Prefs.set("MICMAQ.macroNucleus", macroArea.getText());
+
+//        Segmentation
+        Prefs.set("MICMAQ.useDeepLearningNucleus", cellPoseRadioButton.isSelected());
+        Prefs.set("MICMAQ.finalValidation", finalValidationCheckBox.isSelected());
+        Prefs.set("MICMAQ.nucleusSaveROI", saveNucleiROIsCheckBox.isSelected());
+        Prefs.set("MICMAQ.nucleusSaveMask", saveSegmentationMaskCheckBox.isSelected());
+
+//        --> threshold
+        Prefs.set("MICMAQ.thresholdMethodNucleus", threshMethodsCombo.getItemAt(threshMethodsCombo.getSelectedIndex()));
+        Prefs.set("MICMAQ.minSizeNucleus", (double) minSizeNucleusSpinner.getValue());
+        Prefs.set("MICMAQ.nucleiUseWaterShed", useWatershedCheckBox.isSelected());
+        Prefs.set("MICMAQ.nucleusExcludeOnEdges", excludeOnEdges.isSelected());
+
+//        --> cellpose
+        Prefs.set("MICMAQ.cellposeNucleusMethods", cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()));
+        Prefs.set("MICMAQ.cellposeNucleusMinDiameter", (double) (int) cellPoseMinDiameterSpinner.getValue());
+
+//        Show images
+        if (!fromDirectory) {
+            Prefs.set("MICMAQ.nucleusShowPrepro", showPreprocessingImageCheckBox.isSelected());
+            Prefs.set("MICMAQ.nucleusShowMask", showBinaryMaskCheckBox.isSelected());
+        }
+
+    }
+
+    public void setMeasurements(int measuresNucleis) {
+        this.measurements = measuresNucleis;
     }
 }

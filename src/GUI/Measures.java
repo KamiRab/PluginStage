@@ -2,6 +2,7 @@ package GUI;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import ij.Prefs;
 import ij.measure.Measurements;
 
 import javax.swing.*;
@@ -10,117 +11,160 @@ import java.awt.*;
 import java.util.ArrayList;
 
 public class Measures extends JFrame {
-    private JCheckBox std_devCheckBox;
+    private PluginCellProt.MeasureValue measurementsValueClass;
+    private JCheckBox stdDevCheckBoxSelected;
     private JCheckBox feretCheckBox;
     private JCheckBox areaCheckBox;
-    private JCheckBox integrated_densityCheckBox;
+    private JCheckBox integratedDensityCheckBoxSelected;
     private JCheckBox meanCheckBox;
     private JCheckBox minMaxCheckBox;
     private JCheckBox skewnessCheckBox;
-    private JCheckBox area_fractionCheckBox;
-    private JCheckBox center_of_massCheckBox;
+    private JCheckBox areaFractionCheckBoxSelected;
+    private JCheckBox centerOfMassCheckBoxSelected;
     private JCheckBox centroidCheckBox;
     private JCheckBox ellipseCheckBox;
     private JCheckBox kurtosisCheckBox;
     private JCheckBox perimeterCheckBox;
     private JCheckBox modeCheckBox;
-    private JCheckBox shape_descriptorsCheckBox;
+    private JCheckBox shapeDescriptorsCheckBoxSelected;
     private JCheckBox rectCheckBox;
     private JCheckBox medianCheckBox;
     private JButton validateButton;
     private JButton cancelButton;
-    private JPanel measuresPanel;
-    private final ArrayList<String> measurements_names = new ArrayList<>();
+    private JPanel mainPanel;
+    private final ArrayList<String> measurementsNames = new ArrayList<>();
     //    private String[] measurements_names;
-    private int measurements_value = 0;
+    private Integer measurementsValue;
 
-    public Measures() {
+    public Measures(String type, PluginCellProt.MeasureValue measures) {
+        getPrefs(type);
+        this.measurementsValueClass = measures;
         validateButton.addActionListener(e -> {
-            if (areaCheckBox.isSelected()) {
-                measurements_value += Measurements.AREA;
-                measurements_names.add("Area");
-            }
-            if (std_devCheckBox.isSelected()) {
-                measurements_value += Measurements.STD_DEV;
-                measurements_names.add("StdDev");
+            measurementsValue = Measurements.MEAN + Measurements.INTEGRATED_DENSITY + Measurements.AREA;
+//            if (areaCheckBox.isSelected()) {
+//                measurementsValue += Measurements.AREA;
+//                measurementsNames.add("Area");
+//            }
+            if (stdDevCheckBoxSelected.isSelected()) {
+                measurementsValue += Measurements.STD_DEV;
+                measurementsNames.add("StdDev");
             }
             if (minMaxCheckBox.isSelected()) {
-                measurements_value += Measurements.MIN_MAX;
-                measurements_names.add("Min");
-                measurements_names.add("Max");
+                measurementsValue += Measurements.MIN_MAX;
+                measurementsNames.add("Min");
+                measurementsNames.add("Max");
             }
-            if (center_of_massCheckBox.isSelected()) {
-                measurements_value += Measurements.CENTER_OF_MASS;
-                measurements_names.add("XM");
-                measurements_names.add("YM");
+            if (centerOfMassCheckBoxSelected.isSelected()) {
+                measurementsValue += Measurements.CENTER_OF_MASS;
+                measurementsNames.add("XM");
+                measurementsNames.add("YM");
             }
             if (rectCheckBox.isSelected()) {
-                measurements_value += Measurements.RECT;
-                measurements_names.add("BX");
-                measurements_names.add("BY");
-                measurements_names.add("Width");
-                measurements_names.add("Height");
+                measurementsValue += Measurements.RECT;
+                measurementsNames.add("BX");
+                measurementsNames.add("BY");
+                measurementsNames.add("Width");
+                measurementsNames.add("Height");
             }
-            if (shape_descriptorsCheckBox.isSelected()) {
-                measurements_value += Measurements.SHAPE_DESCRIPTORS;
-                measurements_names.add("Circ");
-                measurements_names.add("AR");
-                measurements_names.add("Round");
-                measurements_names.add("Solidity");
+            if (shapeDescriptorsCheckBoxSelected.isSelected()) {
+                measurementsValue += Measurements.SHAPE_DESCRIPTORS;
+                measurementsNames.add("Circ");
+                measurementsNames.add("AR");
+                measurementsNames.add("Round");
+                measurementsNames.add("Solidity");
             }
-            if (integrated_densityCheckBox.isSelected()) {
-                measurements_value += Measurements.INTEGRATED_DENSITY;
-//                    measurements_names.add("IntDen");
-                measurements_names.add("RawIntDen");
-            }
+//            if (integratedDensityCheckBoxSelected.isSelected()) {
+//                measurementsValue += Measurements.INTEGRATED_DENSITY;
+////                    measurements_names.add("IntDen");
+//                measurementsNames.add("RawIntDen");
+//            }
             if (skewnessCheckBox.isSelected()) {
-                measurements_value += Measurements.SKEWNESS;
-                measurements_names.add("Skew");
+                measurementsValue += Measurements.SKEWNESS;
+                measurementsNames.add("Skew");
             }
-            if (area_fractionCheckBox.isSelected()) {
-                measurements_value += Measurements.AREA_FRACTION;
-                measurements_names.add("%Area");
+            if (areaFractionCheckBoxSelected.isSelected()) {
+                measurementsValue += Measurements.AREA_FRACTION;
+                measurementsNames.add("%Area");
             }
-            if (meanCheckBox.isSelected()) {
-                measurements_value += Measurements.MEAN;
-                measurements_names.add("Mean");
-            }
+//            if (meanCheckBox.isSelected()) {
+//                measurementsValue += Measurements.MEAN;
+//                measurementsNames.add("Mean");
+//            }
             if (modeCheckBox.isSelected()) {
-                measurements_value += Measurements.MODE;
-                measurements_names.add("Mode");
+                measurementsValue += Measurements.MODE;
+                measurementsNames.add("Mode");
             }
             if (centroidCheckBox.isSelected()) {
-                measurements_value += Measurements.CENTROID;
-                measurements_names.add("X");
-                measurements_names.add("Y");
+                measurementsValue += Measurements.CENTROID;
+                measurementsNames.add("X");
+                measurementsNames.add("Y");
             }
             if (perimeterCheckBox.isSelected()) {
-                measurements_value += Measurements.PERIMETER;
-                measurements_names.add("Perim.");
+                measurementsValue += Measurements.PERIMETER;
+                measurementsNames.add("Perim.");
             }
             if (ellipseCheckBox.isSelected()) {/*Fit Ellipse*/
-                measurements_value += Measurements.ELLIPSE;
-                measurements_names.add("Major");
-                measurements_names.add("Minor");
-                measurements_names.add("Angle");
+                measurementsValue += Measurements.ELLIPSE;
+                measurementsNames.add("Major");
+                measurementsNames.add("Minor");
+                measurementsNames.add("Angle");
             }
             if (feretCheckBox.isSelected()) {
-                measurements_value += Measurements.FERET;
-                measurements_names.add("Feret");
-                measurements_names.add("FeretX");
-                measurements_names.add("FeretY");
-                measurements_names.add("FeretAngle");
-                measurements_names.add("MinFeret");
+                measurementsValue += Measurements.FERET;
+                measurementsNames.add("Feret");
+                measurementsNames.add("FeretX");
+                measurementsNames.add("FeretY");
+                measurementsNames.add("FeretAngle");
+                measurementsNames.add("MinFeret");
             }
             if (medianCheckBox.isSelected()) {
-                measurements_value += Measurements.MEDIAN;
-                measurements_names.add("Median");
+                measurementsValue += Measurements.MEDIAN;
+                measurementsNames.add("Median");
             }
             if (kurtosisCheckBox.isSelected()) {
-                measurements_value += Measurements.KURTOSIS;
-                measurements_names.add("Kurt");
+                measurementsValue += Measurements.KURTOSIS;
+                measurementsNames.add("Kurt");
             }
+            Prefs.set("MICMAQ.Measurements_" + type, measurementsValue);
+            measurementsValueClass.setMeasure(measurementsValue);
+            Prefs.savePreferences();
+//            assignMeasurementsValue(measures);
+            setVisible(false);
         });
+        cancelButton.addActionListener(e -> dispose());
+    }
+
+    private void getPrefs(String type) {
+        int measurements = (int) Prefs.get("MICMAQ.Measurements_" + type, (Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY));
+//        areaCheckBox.setSelected((measurements & Measurements.AREA) != 0);
+        stdDevCheckBoxSelected.setSelected((measurements & Measurements.STD_DEV) != 0);
+        minMaxCheckBox.setSelected((measurements & Measurements.MIN_MAX) != 0);
+        centerOfMassCheckBoxSelected.setSelected((measurements & Measurements.CENTER_OF_MASS) != 0);
+        rectCheckBox.setSelected((measurements & Measurements.RECT) != 0);
+        shapeDescriptorsCheckBoxSelected.setSelected((measurements & Measurements.SHAPE_DESCRIPTORS) != 0);
+//        integratedDensityCheckBoxSelected.setSelected((measurements & Measurements.INTEGRATED_DENSITY) != 0);
+        skewnessCheckBox.setSelected((measurements & Measurements.SKEWNESS) != 0);
+        areaFractionCheckBoxSelected.setSelected((measurements & Measurements.AREA_FRACTION) != 0);
+//        meanCheckBox.setSelected((measurements & Measurements.MEAN) != 0);
+        centroidCheckBox.setSelected((measurements & Measurements.CENTROID) != 0);
+        perimeterCheckBox.setSelected((measurements & Measurements.PERIMETER) != 0);
+        ellipseCheckBox.setSelected((measurements & Measurements.ELLIPSE) != 0);
+        feretCheckBox.setSelected((measurements & Measurements.FERET) != 0);
+        medianCheckBox.setSelected((measurements & Measurements.MEDIAN) != 0);
+        kurtosisCheckBox.setSelected((measurements & Measurements.KURTOSIS) != 0);
+    }
+
+//    public int getMeasurements() {
+//        return measurementsValue;
+//    }
+
+    public void run() {
+        setTitle("Choose measurements");
+        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/IconPlugin.png")));
+        setContentPane(this.mainPanel);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        pack();
+        setVisible(true);
     }
 
     {
@@ -138,78 +182,79 @@ public class Measures extends JFrame {
      * @noinspection ALL
      */
     private void $$$setupUI$$$() {
-        measuresPanel = new JPanel();
-        measuresPanel.setLayout(new GridLayoutManager(10, 2, new Insets(0, 0, 0, 0), -1, -1));
-        measuresPanel.setBorder(BorderFactory.createTitledBorder(null, "Measures", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        std_devCheckBox = new JCheckBox();
-        std_devCheckBox.setText("Standard deviation");
-        measuresPanel.add(std_devCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new GridLayoutManager(10, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.setBorder(BorderFactory.createTitledBorder(null, "Measures", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        stdDevCheckBoxSelected = new JCheckBox();
+        stdDevCheckBoxSelected.setText("Standard deviation");
+        mainPanel.add(stdDevCheckBoxSelected, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         minMaxCheckBox = new JCheckBox();
         minMaxCheckBox.setText("Min and max gray value");
-        measuresPanel.add(minMaxCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(minMaxCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         rectCheckBox = new JCheckBox();
         rectCheckBox.setText("Bounding rectangle");
-        measuresPanel.add(rectCheckBox, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        center_of_massCheckBox = new JCheckBox();
-        center_of_massCheckBox.setText("Center of mass");
-        measuresPanel.add(center_of_massCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        shape_descriptorsCheckBox = new JCheckBox();
-        shape_descriptorsCheckBox.setText("Shape descriptors");
-        measuresPanel.add(shape_descriptorsCheckBox, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        area_fractionCheckBox = new JCheckBox();
-        area_fractionCheckBox.setText("Area fraction");
-        measuresPanel.add(area_fractionCheckBox, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(rectCheckBox, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        centerOfMassCheckBoxSelected = new JCheckBox();
+        centerOfMassCheckBoxSelected.setText("Center of mass");
+        mainPanel.add(centerOfMassCheckBoxSelected, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        shapeDescriptorsCheckBoxSelected = new JCheckBox();
+        shapeDescriptorsCheckBoxSelected.setText("Shape descriptors");
+        mainPanel.add(shapeDescriptorsCheckBoxSelected, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        areaFractionCheckBoxSelected = new JCheckBox();
+        areaFractionCheckBoxSelected.setText("Area fraction");
+        mainPanel.add(areaFractionCheckBoxSelected, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         skewnessCheckBox = new JCheckBox();
         skewnessCheckBox.setText("Skewness");
-        measuresPanel.add(skewnessCheckBox, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(skewnessCheckBox, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         modeCheckBox = new JCheckBox();
         modeCheckBox.setText("Modal gray value");
-        measuresPanel.add(modeCheckBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(modeCheckBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ellipseCheckBox = new JCheckBox();
         ellipseCheckBox.setText("Fit ellipse");
-        measuresPanel.add(ellipseCheckBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(ellipseCheckBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         kurtosisCheckBox = new JCheckBox();
         kurtosisCheckBox.setText("Kurtosis");
-        measuresPanel.add(kurtosisCheckBox, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(kurtosisCheckBox, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         centroidCheckBox = new JCheckBox();
         centroidCheckBox.setText("Centroid");
-        measuresPanel.add(centroidCheckBox, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(centroidCheckBox, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         perimeterCheckBox = new JCheckBox();
         perimeterCheckBox.setText("Perimeter");
-        measuresPanel.add(perimeterCheckBox, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(perimeterCheckBox, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         feretCheckBox = new JCheckBox();
         feretCheckBox.setText("Feret's diameter");
-        measuresPanel.add(feretCheckBox, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(feretCheckBox, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         areaCheckBox = new JCheckBox();
         areaCheckBox.setEnabled(false);
         areaCheckBox.setSelected(true);
         areaCheckBox.setText("Area");
-        measuresPanel.add(areaCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        integrated_densityCheckBox = new JCheckBox();
-        integrated_densityCheckBox.setEnabled(false);
-        integrated_densityCheckBox.setSelected(true);
-        integrated_densityCheckBox.setText("Integrated density");
-        measuresPanel.add(integrated_densityCheckBox, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(areaCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        integratedDensityCheckBoxSelected = new JCheckBox();
+        integratedDensityCheckBoxSelected.setEnabled(false);
+        integratedDensityCheckBoxSelected.setSelected(true);
+        integratedDensityCheckBoxSelected.setText("Integrated density");
+        mainPanel.add(integratedDensityCheckBoxSelected, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         meanCheckBox = new JCheckBox();
         meanCheckBox.setEnabled(false);
         meanCheckBox.setSelected(true);
         meanCheckBox.setText("Mean gray value");
-        measuresPanel.add(meanCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(meanCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         medianCheckBox = new JCheckBox();
         medianCheckBox.setText("Median");
-        measuresPanel.add(medianCheckBox, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(medianCheckBox, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         validateButton = new JButton();
         validateButton.setText("Validate");
-        measuresPanel.add(validateButton, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(validateButton, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cancelButton = new JButton();
         cancelButton.setText("Cancel");
-        measuresPanel.add(cancelButton, new GridConstraints(9, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(cancelButton, new GridConstraints(9, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
      * @noinspection ALL
      */
     public JComponent $$$getRootComponent$$$() {
-        return measuresPanel;
+        return mainPanel;
     }
+
 }

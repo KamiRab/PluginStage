@@ -8,6 +8,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
+import ij.io.OpenDialog;
 import ij.plugin.PlugIn;
 
 import javax.swing.*;
@@ -17,8 +18,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.Locale;
 
-/*TODO dernier repertoire actif comme point de départ*/
-//TODO régler probleme images ouvertes et nullité
 public class OpenImages extends JFrame implements PlugIn {
     //    GUI :
     private JPanel mainPanel;
@@ -68,7 +67,7 @@ public class OpenImages extends JFrame implements PlugIn {
 
     public OpenImages() {
         $$$setupUI$$$();
-//        Look for open images to see if the choice for the opened images panel is necessary
+//        Look for open images to see if the choice for the opened images' panel is necessary
         if (WindowManager.getImageCount() == 0) { /*No open images*/
             /*No need for the radiobutton*/
             useOpenImagesRadioButton.setVisible(false);
@@ -98,8 +97,8 @@ public class OpenImages extends JFrame implements PlugIn {
 //      DIRECTORY PANEL
         //        Set up extension fields
         otherExtensionField.setVisible(false);
-        extension.setSelectedItem(Prefs.get("PluginToName.ChoiceExtension", ".TIF"));
-        otherExtensionField.setText(Prefs.get("PluginToName.ChoiceExtension", ".TIF"));
+        extension.setSelectedItem(Prefs.get("MICMAQ.ChoiceExtension", ".TIF"));
+        otherExtensionField.setText(Prefs.get("MICMAQ.ChoiceExtension", ".TIF"));
 
         chooseDirectoryButton.addActionListener(e -> {
             directory = chooseDirectory(OpenImages.this);
@@ -109,10 +108,10 @@ public class OpenImages extends JFrame implements PlugIn {
                 if (path.split("\\\\").length > 2) {
                     String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
                     choosenDirectory.setText("..." + path_shorten);
-                } else if(path.split("/").length>2){
+                } else if (path.split("/").length > 2) {
                     String path_shorten = path.substring(path.substring(0, path.lastIndexOf("/")).lastIndexOf("/"));
                     choosenDirectory.setText("..." + path_shorten);
-                }else {
+                } else {
                     choosenDirectory.setText(path);
                 }
 
@@ -124,22 +123,26 @@ public class OpenImages extends JFrame implements PlugIn {
             String extensionSelected = (String) extension.getSelectedItem();
             if (extensionSelected.equals("Other")) { /*If extension wanted not in Jlist*/
                 otherExtensionField.setVisible(true);
-                otherExtensionField.setText(Prefs.get("PluginToName.ChoiceExtensionCustom", ".TIF"));
+                otherExtensionField.setText(Prefs.get("MICMAQ.ChoiceExtensionCustom", ".TIF"));
             } else {
                 otherExtensionField.setText(extensionSelected);
                 otherExtensionField.setVisible(false);
             }
 //            If files from directory have already been filtered, refilter
-            if (ipList.length > 0) {
+            if (ipList != null && ipList.length > 0) {
                 getFilesFromDirectory();
             }
+        });
+
+        otherExtensionField.addActionListener(e -> {
+            if (ipList != null && ipList.length > 0) getFilesFromDirectory();
         });
 
 //        OPEN IMAGE PANEL
 //        Display selected image
         displayImageButton.addActionListener(e -> {
             if (windowList.getModel().getSize() > 0) {
-                int selectedImageIndex = windowList.getSelectedValue().getImagePlus().getID();
+                int selectedImageIndex = windowList.getSelectedValue().getID();
                 IJ.selectWindow(selectedImageIndex);
             }
         });
@@ -159,8 +162,8 @@ public class OpenImages extends JFrame implements PlugIn {
                     if (ipList == null) {
                         IJ.error("No image to analyze.");
                     } else {
-                        Prefs.set("PluginToName.ChoiceExtension", extension.getItemAt(extension.getSelectedIndex()));
-                        Prefs.set("PluginToName.ChoiceExtensionCustom", otherExtensionField.getText());
+                        Prefs.set("MICMAQ.ChoiceExtension", extension.getItemAt(extension.getSelectedIndex()));
+                        Prefs.set("MICMAQ.ChoiceExtensionCustom", otherExtensionField.getText());
                     }
                 }
             } else { /*Images used afterwards are opened images*/
@@ -188,6 +191,7 @@ public class OpenImages extends JFrame implements PlugIn {
     public static File chooseDirectory(Component parent) {
         //            Create JFileChooser to get directory
         JFileChooser directoryChooser = new JFileChooser(IJ.getDirectory("current"));
+
         directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
 //            If directory approved by user
@@ -198,6 +202,7 @@ public class OpenImages extends JFrame implements PlugIn {
             } else if (!directory.isDirectory()) {
                 IJ.error("It needs to be a directory not a file");
             }
+            OpenDialog.setDefaultDirectory(directory.getAbsolutePath());
             return directory;
         }
         return null;
@@ -238,7 +243,7 @@ public class OpenImages extends JFrame implements PlugIn {
     @Override
     public void run(String s) {
         createUIComponents();
-        setTitle("Plugin2Name");
+        setTitle("MIC-MAQ");
         setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/IconPlugin.png")));
         setContentPane(this.mainPanel);
         setPreferredSize(new Dimension(500, 300));
@@ -269,13 +274,13 @@ public class OpenImages extends JFrame implements PlugIn {
 
     public static void main(String[] args) {
         ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-//        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-//        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-//        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-//        for (ImagePlus images : imagesToAnalyze
-//        ) {
-//            images.show();
-//        }
+        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
+        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+        for (ImagePlus images : imagesToAnalyze
+        ) {
+            images.show();
+        }
         OpenImages openImages = new OpenImages();
         openImages.run(null);
     }
