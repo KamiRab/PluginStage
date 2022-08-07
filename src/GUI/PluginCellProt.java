@@ -403,7 +403,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
             }
             cytoplasmPanel.setMeasurements(measuresCells.measure);
             cytoplasmPanel.setNucleiPanel(nucleiPanel);
-            cytoplasmPanel.setResultsCheckbox(wantTosave);
+            cytoplasmPanel.showResultsCheckBox(wantTosave);
         }
         if (!cytoplasmCheckBox.isSelected() && cytoplasmPanel != null) {
             tabs.remove(cytoplasmPanel.getMainPanel());

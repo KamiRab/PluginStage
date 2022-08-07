@@ -50,7 +50,7 @@ public class ImageToAnalyze {
 //    GETTERS
 
     /**
-     * If ImagePlus does not exist, creates the instance
+     * If ImagePlus does not exist (image from directory), creates the instance
      *
      * @return ImagePlus instance
      */
@@ -213,7 +213,7 @@ public class ImageToAnalyze {
         }
         if (lastSlice<=maxSlices){
             lastSliceSpinner.setModel(new SpinnerNumberModel(lastSlice,1,maxSlices,1));
-        }else {
+        }else {/*prefs saved for image with more slices than actual images*/
             lastSliceSpinner.setModel(new SpinnerNumberModel(maxSlices,1,maxSlices,1));
         }
     }

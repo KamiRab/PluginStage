@@ -13,10 +13,9 @@ import static ij.IJ.d2s;
  * Class to define calibration and parse calibration file
  */
 public class MeasureCalibration {
-    private final String name;
-    private final double pixelLength;
-    private final double pixelArea;
-    private final String unit;
+    private final String name; /*name of calibration*/
+    private final double pixelLength; /*length of 1 pixel in real life*/
+    private final String unit; /*unit of length the measures should be in*/
 
 //    CONSTRUCTORS
     /**
@@ -38,7 +37,6 @@ public class MeasureCalibration {
             value_tmp=1;
         }
         this.pixelLength = value_tmp;
-        this.pixelArea = value_tmp*value_tmp;
 
 //        SET UNIT
         this.unit = unit;
@@ -52,7 +50,6 @@ public class MeasureCalibration {
         this.name = "No calibration";
 //        SET VALUE
         this.pixelLength =1;
-        this.pixelArea =1;
 //        SET UNIT
         this.unit = "pixel";
     }
@@ -65,7 +62,7 @@ public class MeasureCalibration {
         return pixelLength;
     }
     public double getPixelArea() {
-        return pixelArea;
+        return pixelLength*pixelLength;
     }
     public String getUnit() {
         return unit;
@@ -107,7 +104,7 @@ public class MeasureCalibration {
                 ex.printStackTrace();
             }
         } catch (IOException e) { /*If the file can not be read, display error message*/
-            IJ.error("Could not read the file, please verify rights of access");
+            IJ.error("Could not read the file, it can be due to rights of access");
             e.printStackTrace();
         }
         return measureCalibrations;
@@ -130,8 +127,8 @@ public class MeasureCalibration {
     }
 
     /**
-     * Convert getCalibrationFromFile ArrayLis to array
-     * @return array of Calibrations contained in Helpers.Calibration file
+     * Convert getCalibrationFromFile ArrayList to array
+     * @return array of Calibrations contained in Calibration file
      */
     public static MeasureCalibration[] getCalibrationArrayFromFile(){
         ArrayList<MeasureCalibration> calibrationsArrayList = getCalibrationFromFile();
@@ -167,7 +164,7 @@ public class MeasureCalibration {
     }
 
     /**
-     * From name of calibration, found the Helpers.Calibration object corresponding
+     * From name of calibration, found the Calibration object corresponding
      * Used for the JComboBox
      * @param measureCalibrations : array of Calibrations objects
      * @param nameToFind : name of calibration to find

@@ -20,8 +20,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class NucleiPanel extends JPanel {
-    private final boolean fromDirectory;
-    private File cellposeModelPath;
     //    GUI
     private JPanel mainPanel;
     private JButton previewButton;
@@ -31,7 +29,7 @@ public class NucleiPanel extends JPanel {
     private JScrollPane imageListScrolling;
     private JList<ImageToAnalyze> imageList;
     private JTextField imageEndingField;
-    private JLabel endingLabel;
+    private JLabel imageEndingLabel;
     private JLabel errorImageEndingLabel;
 
     //    Preprocessing : Z-stack
@@ -72,9 +70,16 @@ public class NucleiPanel extends JPanel {
     //    CELLPOSE
     private JPanel cellPosePanel;
     private JComboBox<String> cellPoseModelCombo;
+
     private JSpinner cellPoseMinDiameterSpinner;
     private JLabel cellPoseMinDiameterLabel;
     private JLabel cellPoseModelLabel;
+//    CELLPOSE : OWN MODEL
+    private JPanel ownModelPanel;
+    private JLabel modelPathLabel;
+    private JTextField modelPathField;
+    private JButton modelBrowseButton;
+
 
     //    CELLPOSE & THRESHOLD
     private JPanel commonParameters;
@@ -83,17 +88,15 @@ public class NucleiPanel extends JPanel {
     private JCheckBox saveNucleiROIsCheckBox;
     private JCheckBox saveSegmentationMaskCheckBox;
     private JCheckBox showPreprocessingImageCheckBox;
-    private JPanel ownModelPanel;
-    private JLabel modelPathLabel;
-    private JTextField modelPathField;
-    private JButton modelBrowseButton;
+
 
     //    NON GUI
+    private final boolean fromDirectory; /*True if image from directory*/
     private final ImageToAnalyze[] imagesNames;
     private final DefaultListModel<ImageToAnalyze> imageListModel = new DefaultListModel<>();
-    private boolean filteredImages;
+    private boolean filteredImages; /*true if there are filtered image*/
     private int measurements;
-//    private final boolean showImage;
+    private File cellposeModelPath;
 
 //    TODO attention message d'erreur si mauvaise concordance
 //    TODO get Last substring index
@@ -120,11 +123,12 @@ public class NucleiPanel extends JPanel {
             IJ.error("No images (NucleiPanel");
         }
 
-//        ITEM LISTENERS
         imageEndingField.addActionListener(e -> {
             imageEndingField.setText(imageEndingField.getText().trim());
             filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         });
+
+//        ITEM LISTENERS : Add/Remove element of panel according to choice
         isAZStackCheckBox.addItemListener(e -> zStackParameters.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         chooseSlicesToUseCheckBox.addItemListener(e -> {
             slicesPanel.setVisible(e.getStateChange() == ItemEvent.SELECTED);
@@ -139,8 +143,10 @@ public class NucleiPanel extends JPanel {
             String modelSelected = (String) cellPoseModelCombo.getSelectedItem();
             ownModelPanel.setVisible(modelSelected.equals("own_model"));
         });
+
+        //        BUTTON TO CHOOSE CELLPOSE MODEL PATH
         modelBrowseButton.addActionListener(e -> {
-            cellposeModelPath = CytoCellPanel.chooseFile(this.mainPanel);
+            cellposeModelPath = CytoCellPanel.chooseCellposeModelFile(this.mainPanel);
             if (cellposeModelPath != null) {
                 String path = cellposeModelPath.getAbsolutePath();
                 if (path.split("\\\\").length > 2) {
@@ -327,9 +333,9 @@ public class NucleiPanel extends JPanel {
         chooseFilePanel.add(imageListScrolling, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         imageList.setEnabled(true);
         imageListScrolling.setViewportView(imageList);
-        endingLabel = new JLabel();
-        endingLabel.setText("Image ending without extension");
-        chooseFilePanel.add(endingLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        imageEndingLabel = new JLabel();
+        imageEndingLabel.setText("Image ending without extension");
+        chooseFilePanel.add(imageEndingLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         chooseFilePanel.add(imageEndingField, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         errorImageEndingLabel = new JLabel();
         errorImageEndingLabel.setText("No image corresponding to ending");
