@@ -5,6 +5,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import helpers.ImageToAnalyze;
 import ij.IJ;
+import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
 import ij.io.OpenDialog;
@@ -276,6 +277,23 @@ public class OpenImages extends JFrame implements PlugIn {
             preTextChoiceImage.setText("There are no open images, please choose a directory");
             useDirectory = true;
         }
+    }
+
+    /**
+     * Tests
+     * @param args : none
+     */
+    public static void main(String[] args) {
+        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
+        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
+        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
+        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
+        for (ImagePlus images : imagesToAnalyze
+        ) {
+            images.show();
+        }
+        OpenImages openImages = new OpenImages();
+        openImages.run(null);
     }
 
     /**

@@ -531,6 +531,23 @@ public class PluginCellProt extends JFrame implements PlugIn {
     }
 
     /**
+     * Tests
+     * @param args : none
+     */
+    public static void main(String[] args) {
+        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[6];
+        imagesToAnalyze[0] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w11 CY5.TIF");
+        imagesToAnalyze[1] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w21 FITC.TIF");
+        imagesToAnalyze[2] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w31 DAPI 405.TIF");
+        imagesToAnalyze[3] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w11 CY5.TIF");
+        imagesToAnalyze[4] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w21 FITC.TIF");
+        imagesToAnalyze[5] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w31 DAPI 405.TIF");
+        PluginCellProt plugin = new PluginCellProt(imagesToAnalyze, true);
+        plugin.run(null);
+
+    }
+
+    /**
      * Helper class that allows modification of int in measure class
      */
     static class MeasureValue {
