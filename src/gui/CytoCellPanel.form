@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="GUI.CytoCellPanel">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="gui.CytoCellPanel">
   <grid id="27dc6" binding="mainPanel" layout-manager="GridLayoutManager" row-count="4" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
@@ -56,22 +56,6 @@
             <properties>
               <text value="Show segmentation(s) mask(s)"/>
               <toolTipText value="Warning ! Process will pause after each set of images' measurement"/>
-            </properties>
-          </component>
-          <component id="540a1" class="javax.swing.JCheckBox" binding="saveCellROIsCheckBox">
-            <constraints>
-              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-            </constraints>
-            <properties>
-              <text value="Save all ROIs"/>
-            </properties>
-          </component>
-          <component id="ed7e9" class="javax.swing.JCheckBox" binding="saveSegmentationMaskCheckBox" default-binding="true">
-            <constraints>
-              <grid row="5" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-            </constraints>
-            <properties>
-              <text value="Save segmentation(s) mask(s)"/>
             </properties>
           </component>
           <component id="8eb7c" class="javax.swing.JCheckBox" binding="showCompositeImageCheckBox" default-binding="true">
@@ -171,6 +155,30 @@
               </component>
             </children>
           </grid>
+          <component id="ed7e9" class="javax.swing.JCheckBox" binding="saveSegmentationMaskCheckBox" default-binding="true">
+            <constraints>
+              <grid row="5" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Save segmentation(s) mask(s)"/>
+            </properties>
+          </component>
+          <component id="540a1" class="javax.swing.JCheckBox" binding="saveCellROIsCheckBox">
+            <constraints>
+              <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Save all ROIs"/>
+            </properties>
+          </component>
+          <component id="83484" class="javax.swing.JCheckBox" binding="finalValidationCheckBox" default-binding="true">
+            <constraints>
+              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Final validation"/>
+            </properties>
+          </component>
         </children>
       </grid>
       <component id="c3635" class="javax.swing.JButton" binding="previewButton" default-binding="true">

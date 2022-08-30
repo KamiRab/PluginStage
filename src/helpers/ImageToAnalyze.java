@@ -1,4 +1,4 @@
-package Helpers;
+package helpers;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -10,16 +10,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 /**
- * Class to facilitate display of ImagePlus names
+ * Author : Camille RABIER
+ * Date : 22/08/2022
+ * Class to facilitate management of ImagePlus
  * - For images from directory creates the ImagePlus instances at the necessary time
  * - If directory set, creates Results directory
+ * - facilitates name to display
  */
 public class ImageToAnalyze {
     private ImagePlus imagePlus;
     private String directory; /*directory to save results them*/
     private final String imageName;
+    private boolean hideID=false;
 
 //    CONSTRUCTORS
 
@@ -109,6 +112,9 @@ public class ImageToAnalyze {
         }
     }
 
+    public void setHideID(boolean hide){
+        this.hideID = hide;
+    }
 
 
     //    FUNCTIONS/METHODS
@@ -117,7 +123,7 @@ public class ImageToAnalyze {
      */
     @Override
     public String toString() {
-        if (directory != null) {
+        if (directory != null || hideID) {
             return imageName;
         } else { /*For openImages, we want the ID to be displayed in case there are multiple images opened with same name*/
             return imageName + "#" + imagePlus.getID();
@@ -158,21 +164,36 @@ public class ImageToAnalyze {
     }
 
     /**
+     * Return name of image without channel specific information
+     * @param imageToAnalyze : image
+     * @return name of image without the ending entered by the user
+     */
+    public static String getNameExperiment(ImageToAnalyze imageToAnalyze, JTextField imageEndingField){
+        if (imageEndingField.getText().length() == 0) {
+            return imageToAnalyze.getImageName();
+        } else {
+            return ImageToAnalyze.nameWithoutExtension(imageToAnalyze.getImageName().split(imageEndingField.getText())[0] + imageToAnalyze.getImageName().split(imageEndingField.getText())[1]);
+        }
+    }
+
+    /**
      * Filter list of image by name ending and if necessary display error message in panel
      * Iterates on all names in the model and if the name does not end with the label given by user,
      * it is removed from the model
      * @param filteredImageList : JList model
      * @param endingFilter : String that the images names should end by
      * @param allImageList : all the images that have to be considered
-     * @param errorImageEndingLabel : Jlabel that is displayed in case of empty model
+     * @param errorImageEndingLabel : JLabel that is displayed in case of empty model
      * @return true if there are images in the filteredImageList.
      */
-    public static boolean filterModelbyEnding(DefaultListModel<ImageToAnalyze> filteredImageList, String endingFilter, ImageToAnalyze[] allImageList, JLabel errorImageEndingLabel) {
+    public static boolean filterModelByEnding(DefaultListModel<ImageToAnalyze> filteredImageList, String endingFilter, ImageToAnalyze[] allImageList, JLabel errorImageEndingLabel) {
         for (ImageToAnalyze image : allImageList) {
             String title = image.getImageName();
             String titleWoExt = ImageToAnalyze.nameWithoutExtension(title);
 //          Assert if image title ends by filter
-            if (!title.endsWith(endingFilter) && !titleWoExt.endsWith(endingFilter)) { /*the title does not end by the filter*/
+
+//            if (!title.endsWith(endingFilter) && !titleWoExt.endsWith(endingFilter)) { /*the title does not end by the filter*/
+            if (!title.contains(endingFilter) && !titleWoExt.contains(endingFilter)) { /*the title does not end by the filter*/
                 if (filteredImageList.contains(image)) { /*if model contains the image, removes it*/
                     filteredImageList.removeElement(image);
                 }

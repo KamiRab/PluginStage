@@ -1,11 +1,11 @@
-package GUI;
+package gui;
 
-import Detectors.CellDetector;
-import Detectors.Experiment;
-import Detectors.NucleiDetector;
-import Detectors.SpotDetector;
-import Helpers.ImageToAnalyze;
-import Helpers.MeasureCalibration;
+import detectors.CellDetector;
+import detectors.Experiment;
+import detectors.NucleiDetector;
+import detectors.SpotDetector;
+import helpers.ImageToAnalyze;
+import helpers.MeasureCalibration;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -26,9 +26,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 
-//TODO verify prefs
-//TODO verify saving directory
-//TODO if error message for extension, not allow launch or preview
+/**
+ * Author : Camille RABIER
+ * Date : 12/03/2022
+ * GUI Class for
+ * - choosing number of channels to analyze
+ * - choice of calibration and measures
+ * - containing all channel specific panels
+ * - launching or canceling plugin
+ */
 public class PluginCellProt extends JFrame implements PlugIn {
     private final boolean fromDirectory;
     //    GUI
@@ -65,7 +71,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
     private JButton chooseResultsDirectoryButton;
     private JTextArea resultsDirectoryField;
     private JPanel resultsDirectoryPanel;
-    private JPanel Logo;
+    private JPanel logo;
     private JButton setMeasurementsForNucleiButton;
     private JButton setMeasurementsForCellsButton;
     private JPanel detect;
@@ -74,30 +80,23 @@ public class PluginCellProt extends JFrame implements PlugIn {
     private final ImageToAnalyze[] ipList;
     private ArrayList<Experiment> experiments;
     private boolean interrupt = false;
-    private MeasureValue measuresCells;
-    private MeasureValue measuresNuclei;
-//    private final int[] idsBefore;
+    private final MeasureValue measuresCells;
+    private final MeasureValue measuresNuclei;
 
 
     public PluginCellProt(ImageToAnalyze[] imagesToAnalyse, boolean fromDirectory) {
-//        idsBefore = WindowManager.getIDList();
         this.fromDirectory = fromDirectory;
         $$$setupUI$$$();
-//        this.setAlwaysOnTop(true);
         launchButton.setVisible(false);
+        for (ImageToAnalyze image : imagesToAnalyse) {
+            image.setHideID(true);
+        }
+        ipList = imagesToAnalyse;
 //        Get preferences
-        /*Helpers.Calibration done in its own method*/
         nucleiCheckBox.setSelected(Prefs.get("MICMAQ.analyseNucleusBoolean", true));
         setMeasurementsForNucleiButton.setVisible(Prefs.get("MICMAQ.analyseNucleusBoolean", true));
         cytoplasmCheckBox.setSelected(Prefs.get("MICMAQ.analyseCytoplasmBoolean", false));
-        setMeasurementsForCellsButton.setVisible(Prefs.get("MICMAQ.analyseCytoplasmBoolean", false));
-        measuresNuclei = new MeasureValue();
-        measuresNuclei.setMeasure(Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY); /*Default measurements*/
-        measuresCells = new MeasureValue();
-        measuresCells.setMeasure(Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY); /*Default measurements*/
-//        double nrproteinsDoubleValue = ;
-        nrProteinsSpinner.setValue((int) Prefs.get("MICMAQ.numberProteinsChannel", 2));
-        resultsDirectoryPanel.setVisible(false);
+//        DETECTORS CONFIGURATION
         if (fromDirectory) {
             saveResultsROIAndCheckBox.setVisible(false);
             saveResultsROIAndCheckBox.setSelected(true);
@@ -108,22 +107,36 @@ public class PluginCellProt extends JFrame implements PlugIn {
                 resultsDirectoryPanel.setVisible(true);
             }
         }
-        ipList = imagesToAnalyse;
-
-        addNewCalibrationButton.addActionListener(e -> new NewCalibrationPanel((DefaultComboBoxModel<MeasureCalibration>) calibrationCombo.getModel()).run());
+        nrProteinsSpinner.setValue((int) Prefs.get("MICMAQ.numberProteinsChannel", 2));
+        resultsDirectoryPanel.setVisible(false);
+        validateMainConfigurationButton.addActionListener(e -> {
+            createConfig();
+            if (tabs.getTabCount() > 1) {
+                tabs.setSelectedIndex(1);
+            }
+            launchButton.setVisible(true);
+            pack();
+        });
         nucleiCheckBox.addItemListener(e -> setMeasurementsForNucleiButton.setVisible(e.getStateChange() == ItemEvent.SELECTED));
         cytoplasmCheckBox.addItemListener(e -> setMeasurementsForCellsButton.setVisible(e.getStateChange() == ItemEvent.SELECTED));
+
+//        CALIBRATION
+        addNewCalibrationButton.addActionListener(e -> new NewCalibrationPanel((DefaultComboBoxModel<MeasureCalibration>) calibrationCombo.getModel()).run());
+//        CHOOSE MEASUREMENTS
+        setMeasurementsForCellsButton.setVisible(Prefs.get("MICMAQ.analyseCytoplasmBoolean", false));
+        measuresNuclei = new MeasureValue();
+        measuresNuclei.setMeasure(Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY); /*Default measurements*/
+        measuresCells = new MeasureValue();
+        measuresCells.setMeasure(Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY); /*Default measurements*/
         setMeasurementsForCellsButton.addActionListener(e -> {
             Measures cellMeas = new Measures("Cells", measuresCells);
             cellMeas.run();
-//            measuresCells = Integer.parseInt(measuresCellsTmp);
         });
         setMeasurementsForNucleiButton.addActionListener(e -> {
             Measures nucleiMeas = new Measures("Nuclei", measuresNuclei);
             nucleiMeas.run();
-//            measuresNuclei = Integer.parseInt(measuresNucleiTmp);
-            IJ.log(String.valueOf(measuresNuclei));
         });
+//        LAUNCH
         launchButton.addActionListener(e -> {
             interrupt = false;
             String directory = ipList[0].getDirectory();
@@ -137,7 +150,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
 
 //            Set preferences
             setPreferences();
-
+//            CREATE EXPERIMENTS
             String nameExperiment;
             ArrayList<SpotDetector> spots;
             experiments = new ArrayList<>();
@@ -159,9 +172,9 @@ public class PluginCellProt extends JFrame implements PlugIn {
                     for (NucleiDetector nucleiDetector : nucleiDetectorArrayList) {
                         nameExperiment = nucleiDetector.getNameExperiment();
                         spots = new ArrayList<>();
-                        for (SpotPanel spot_panel : spotPanels) {
-                            ArrayList<SpotDetector> spotPanelImages = spot_panel.getImages();
-                            spot_panel.setPreferences();
+                        for (SpotPanel spotPanel : spotPanels) {
+                            ArrayList<SpotDetector> spotPanelImages = spotPanel.getImages();
+                            spotPanel.setPreferences();
                             if (spotPanelImages != null) {
                                 for (SpotDetector spotDetector : spotPanelImages) {
                                     if (spotDetector.getNameExperiment().equals(nameExperiment)) {
@@ -172,15 +185,16 @@ public class PluginCellProt extends JFrame implements PlugIn {
                                 interrupt = true;
                             }
                         }
+                        if (spots.size() == 0 && spotPanels.size() > 0) {
+                            IJ.log("No spots images were associated to nuclei images. Please verify the image ending field.");
+                        }
                         if (cellDetectorArrayList != null) {
                             for (CellDetector cellDetector : cellDetectorArrayList) {
                                 if (cellDetector.getNameExperiment().equals(nameExperiment)) {
-//                                        IJ.log("Nuclei: " + nucleiDetector.getImageTitle() + " Cytoplasm/Cell :" + cellDetector.getImageTitle() + nameProteins);
                                     experiments.add(new Experiment(nucleiDetector, cellDetector, spots, finalResultsCellSpot, finalResultsNuclei, calibrationCombo.getItemAt(calibrationCombo.getSelectedIndex())));
                                 }
                             }
                         } else {
-//                            IJ.log("Nuclei: " + nucleiDetector.getImageTitle() + nameProteins);
                             experiments.add(new Experiment(nucleiDetector, null, spots, finalResultsCellSpot, null, calibrationCombo.getItemAt(calibrationCombo.getSelectedIndex())));
                         }
                     }
@@ -202,7 +216,9 @@ public class PluginCellProt extends JFrame implements PlugIn {
                             } else {
                                 interrupt = true;
                             }
-//                            IJ.log("Cell: " + cellDetector.getImageTitle() + nameProteins);
+                        }
+                        if (spots.size() == 0 && spotPanels.size() > 0) {
+                            IJ.log("No spots images were associated to nuclei images. Please verify the image ending field.");
                         }
                         experiments.add(new Experiment(null, cellDetector, spots, finalResultsCellSpot, null, calibrationCombo.getItemAt(calibrationCombo.getSelectedIndex())));
                     }
@@ -224,7 +240,6 @@ public class PluginCellProt extends JFrame implements PlugIn {
                         } else {
                             interrupt = true;
                         }
-//                            IJ.log("Cell: " + cellDetector.getImageTitle() + nameProteins);
                     }
                     experiments.add(new Experiment(null, null, spots, finalResultsCellSpot, null, calibrationCombo.getItemAt(calibrationCombo.getSelectedIndex())));
                 }
@@ -242,8 +257,9 @@ public class PluginCellProt extends JFrame implements PlugIn {
                         for (Experiment exp : experiments) {
 //                            SHOW PROGRESS BAR
                             if (!interrupt) {
-                                IJ.showProgress(i, experiments.size());/*TODO verify it works*/
+                                IJ.showProgress(i, experiments.size());
                                 IJ.log("Experiment " + i + "/" + experiments.size() + " is launching.");
+                                IJ.log("The name of the experiment is :" + exp.getExperimentName());
                                 interrupt = !exp.run();
                                 if (saveResultsROIAndCheckBox.isSelected() || fromDirectory) {
                                     if (nucleiPanel != null && cytoplasmPanel != null) {
@@ -279,31 +295,23 @@ public class PluginCellProt extends JFrame implements PlugIn {
                 Prefs.savePreferences();
             }
         });
-        validateMainConfigurationButton.addActionListener(e -> {
-            createConfig();
-            if (tabs.getTabCount() > 1) {
-                tabs.setSelectedIndex(1);
-            }
-            launchButton.setVisible(true);
-            pack();
-        });
+
         cancelButton.addActionListener(e -> {
-            /*this.dispose()*/
             interrupt = true;
             if (experiments != null) {
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                     @Override
                     protected Void doInBackground() {
+                        IJ.log("Process interrupted");
                         for (Experiment exp : experiments) {
                             exp.interruptProcess();
                         }
-//                        closeAllWindows("Process interrupted.", idsBefore);
                         return null;
                     }
                 };
                 worker.execute();
             } else {
-                this.dispose(); /*TODO what to do with cancel button, when to dispose ?*/
+                this.dispose();
             }
         });
         chooseResultsDirectoryButton.addActionListener(e -> {
@@ -352,45 +360,16 @@ public class PluginCellProt extends JFrame implements PlugIn {
         Prefs.set("MICMAQ.numberProteinsChannel", (Integer) nrProteinsSpinner.getValue());
     }
 
-//    public static void closeAllWindows(String message, int[] idsBefore) {
-//        new WaitForUserDialog(message).show();
-//        int[] idsAll = WindowManager.getIDList();
-//        if (idsAll != null) {
-//            new WindowOrganizer().run("tile");
-//            boolean toclose;
-//            for (int idToClose : idsAll) {
-//                toclose = true;
-//                if (idsBefore != null) {
-//                    for (int idToKeep : idsBefore) {
-//                        if (idToClose == idToKeep) {
-//                            toclose = false;
-//                            break;
-//                        }
-//                    }
-//                    if (toclose) {
-//                        ImagePlus image = WindowManager.getImage(idToClose);
-//                        image.changes = false;
-//                        image.close();
-//                    }
-//                } else {
-//                    ImagePlus image = WindowManager.getImage(idToClose);
-//                    image.changes = false;
-//                    image.close();
-//                }
-//            }
-//
-//        }
-//    }
 
     private void createConfig() {
-        boolean wantTosave = (saveResultsROIAndCheckBox.isSelected() && !resultsDirectoryField.getText().equals("No directory choosen"));
+        boolean wantToSave = (saveResultsROIAndCheckBox.isSelected() && !resultsDirectoryField.getText().equals("No directory chosen"));
         if (nucleiCheckBox.isSelected()) {
             if (nucleiPanel == null) {
                 nucleiPanel = new NucleiPanel(ipList, fromDirectory);
                 tabs.addTab("Detection of nuclei", nucleiPanel.getMainPanel());
             }
             nucleiPanel.setMeasurements(measuresNuclei.measure);
-            nucleiPanel.setResultsCheckbox(wantTosave);
+            nucleiPanel.saveResultsCheckbox(wantToSave);
         }
         if (!nucleiCheckBox.isSelected() && nucleiPanel != null) {
             tabs.remove(nucleiPanel.getMainPanel());
@@ -399,11 +378,11 @@ public class PluginCellProt extends JFrame implements PlugIn {
         if (cytoplasmCheckBox.isSelected()) {
             if (cytoplasmPanel == null) {
                 cytoplasmPanel = new CytoCellPanel(ipList, fromDirectory);
-                tabs.addTab("Detect cytoplasm", cytoplasmPanel.getMainPanel());
+                tabs.addTab("Detect cell", cytoplasmPanel.getMainPanel());
             }
             cytoplasmPanel.setMeasurements(measuresCells.measure);
             cytoplasmPanel.setNucleiPanel(nucleiPanel);
-            cytoplasmPanel.showResultsCheckBox(wantTosave);
+            cytoplasmPanel.saveResultsCheckBox(wantToSave);
         }
         if (!cytoplasmCheckBox.isSelected() && cytoplasmPanel != null) {
             tabs.remove(cytoplasmPanel.getMainPanel());
@@ -422,7 +401,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
             tabs.addTab("Channel " + (tabID + 1) + " quantification", spotPanels.get(tabID).getMainPanel());
         }
         for (int tabIDAll = 0; tabIDAll < nrProteinTabs; tabIDAll++) {
-            spotPanels.get(tabIDAll).setResultsCheckbox(wantTosave);
+            spotPanels.get(tabIDAll).saveResultsCheckbox(wantToSave);
         }
     }
 
@@ -447,7 +426,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         DefaultComboBoxModel<MeasureCalibration> calibrationDefaultComboBoxModel = new DefaultComboBoxModel<>(calibrationsArray);
         calibrationCombo = new JComboBox<>(calibrationDefaultComboBoxModel);
 
-//        Get prefered calibration
+//        Get preferred calibration
         MeasureCalibration measureCalibrationSelected = MeasureCalibration.findCalibrationFromName(calibrationsArray, Prefs.get("MICMAQ.CalibrationValue", "No calibration"));
         if (measureCalibrationSelected == null) {
             measureCalibrationSelected = new MeasureCalibration();
@@ -467,6 +446,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         createUIComponents();
         mainPanel = new JPanel();
         mainPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.setBackground(new Color(-16777216));
         launchButton = new JButton();
         launchButton.setText("Launch");
         mainPanel.add(launchButton, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -477,28 +457,28 @@ public class PluginCellProt extends JFrame implements PlugIn {
         tabs.setTabPlacement(1);
         mainPanel.add(tabs, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         general = new JPanel();
-        general.setLayout(new GridLayoutManager(5, 4, new Insets(0, 0, 0, 0), -1, -1));
+        general.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
         tabs.addTab("General", general);
         detectInLabel = new JLabel();
         detectInLabel.setText("Detect in");
         general.add(detectInLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        general.add(nrProteinsSpinner, new GridConstraints(2, 1, 1, 3, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        general.add(nrProteinsSpinner, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         nrProteinsLabel = new JLabel();
         nrProteinsLabel.setText("Number of channels to quantify");
         general.add(nrProteinsLabel, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         validateMainConfigurationButton = new JButton();
         validateMainConfigurationButton.setText("Validate main configuration");
-        general.add(validateMainConfigurationButton, new GridConstraints(4, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(202, 75), null, 0, false));
-        general.add(calibrationCombo, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        general.add(validateMainConfigurationButton, new GridConstraints(4, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(202, 75), null, 0, false));
+        general.add(calibrationCombo, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         calibrationLabel = new JLabel();
         calibrationLabel.setText("Calibration");
         general.add(calibrationLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         addNewCalibrationButton = new JButton();
-        addNewCalibrationButton.setText("Add new measureCalibration");
-        general.add(addNewCalibrationButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        addNewCalibrationButton.setText("Add new measure calibration");
+        general.add(addNewCalibrationButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         resultsDirectoryPanel = new JPanel();
         resultsDirectoryPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        general.add(resultsDirectoryPanel, new GridConstraints(3, 1, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        general.add(resultsDirectoryPanel, new GridConstraints(3, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         resultsDirectoryField = new JTextArea();
         resultsDirectoryField.setText("No directory choosen");
         resultsDirectoryField.setWrapStyleWord(true);
@@ -513,7 +493,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         general.add(saveResultsROIAndCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         detect = new JPanel();
         detect.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        general.add(detect, new GridConstraints(1, 1, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        general.add(detect, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         cytoplasmCheckBox = new JCheckBox();
         cytoplasmCheckBox.setText("Whole cell (+ cytoplasm only if nuclei selected) ");
         detect.add(cytoplasmCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -527,10 +507,10 @@ public class PluginCellProt extends JFrame implements PlugIn {
         setMeasurementsForNucleiButton = new JButton();
         setMeasurementsForNucleiButton.setText("Set measurements for nuclei");
         detect.add(setMeasurementsForNucleiButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Logo = new JPanel();
-        Logo.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        Logo.setBackground(new Color(-16777216));
-        mainPanel.add(Logo, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, 1, null, null, null, 0, false));
+        logo = new JPanel();
+        logo.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        logo.setBackground(new Color(-16777216));
+        mainPanel.add(logo, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, 1, null, null, null, 0, false));
         pluginTitle = new JLabel();
         pluginTitle.setBackground(new Color(-16777216));
         pluginTitle.setForeground(new Color(-16777216));
@@ -538,7 +518,7 @@ public class PluginCellProt extends JFrame implements PlugIn {
         pluginTitle.setHorizontalTextPosition(0);
         pluginTitle.setIcon(new ImageIcon(getClass().getResource("/logo_bandeau.png")));
         pluginTitle.setText("");
-        Logo.add(pluginTitle, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        logo.add(pluginTitle, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         nrProteinsLabel.setLabelFor(nrProteinsSpinner);
         calibrationLabel.setLabelFor(calibrationCombo);
     }
@@ -550,40 +530,10 @@ public class PluginCellProt extends JFrame implements PlugIn {
         return mainPanel;
     }
 
-    //TODO : centre spot = gaussian (remember)
-//    TODO training spot (zerocostdl4mic) : crop image (validate data augmentation : prend image et fait translation/flip/bruit etc pour avoir plusieurs images à partir d'une)
-    public static void main(String[] args) {
-        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[6];
-        imagesToAnalyze[0] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w11 CY5.TIF");
-        imagesToAnalyze[1] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w21 FITC.TIF");
-        imagesToAnalyze[2] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_02_w31 DAPI 405.TIF");
-        imagesToAnalyze[3] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w11 CY5.TIF");
-        imagesToAnalyze[4] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w21 FITC.TIF");
-        imagesToAnalyze[5] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 2_Foci_Cytoplasme/Images/", "Cell_23_w31 DAPI 405.TIF");
-//        imagesToAnalyze[0] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-//        imagesToAnalyze[1] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-//        imagesToAnalyze[2] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-//        imagesToAnalyze[3] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell004_w31 DAPI 405.TIF");
-//        imagesToAnalyze[4] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell004_w11 CY5.TIF");
-//        imagesToAnalyze[5] = new ImageToAnalyze("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", "WT_HU_Ac-2re--cell004_w21 FITC.TIF");
-//        ImageToAnalyze[] imagesToAnalyze = new ImageToAnalyze[4];
-//        imagesToAnalyze[0] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w21 DAPI 405.TIF");
-//        imagesToAnalyze[1] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_2h_w31 FITC.TIF");
-//        imagesToAnalyze[2] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w21 DAPI 405.TIF");
-//        imagesToAnalyze[3] = new ImageToAnalyze("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\", "C6_1.5µM_IC5_1.1_6h_w31 FITC.TIF");
-//        imagesToAnalyze[0] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_2h_w21 DAPI 405.TIF"));
-//        imagesToAnalyze[1] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_2h_w31 FITC.TIF"));
-//        imagesToAnalyze[2] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_6h_w21 DAPI 405.TIF"));
-//        imagesToAnalyze[3] = new Helpers.ImageToAnalyze(IJ.openImage("C:\\Users\\Camille\\Downloads\\Camille_Stage2022\\Macro 3_An Particles\\Images\\C6_1.5µM_IC5_1.1_6h_w31 FITC.TIF"));
-        PluginCellProt plugin = new PluginCellProt(imagesToAnalyze, true);
-        plugin.run(null);
-
-    }
-
     /**
      * Helper class that allows modification of int in measure class
      */
-    class MeasureValue {
+    static class MeasureValue {
         public int measure;
 
         public MeasureValue() {

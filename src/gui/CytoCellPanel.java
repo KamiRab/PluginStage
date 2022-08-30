@@ -1,8 +1,8 @@
-package GUI;
+package gui;
 
-import Detectors.CellDetector;
-import Detectors.NucleiDetector;
-import Helpers.ImageToAnalyze;
+import detectors.CellDetector;
+import detectors.NucleiDetector;
+import helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -19,9 +19,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-
-//TODO cyto : aire (le reste plus optionnel)
-//
+/**
+ * Author : Camille RABIER
+ * Date : 16/05/2022
+ * GUI Class for
+ * - defining parameters to use for cell and cyto
+ */
+// CONSTRUCTOR
 public class CytoCellPanel {
     //    GUI
     private JPanel mainPanel;
@@ -39,12 +43,12 @@ public class CytoCellPanel {
     private JPanel zProjPanel;
     private JCheckBox isAZStackCheckBox;
 
-//    Preprocessing : Z-Stack general parameters
+    //    Preprocessing : Z-Stack general parameters
     private JPanel zStackParameters;
     private JLabel zProjMethodsLabel;
     private JComboBox<String> zProjMethodsCombo;
     private JCheckBox chooseSlicesToUseCheckBox;
-//    Preprocessing : Z-Stack slice choice
+    //    Preprocessing : Z-Stack slice choice
     private JPanel slicesPanel;
     private JSpinner firstSliceSpinner;
     private JSpinner lastSliceSpinner;
@@ -68,7 +72,6 @@ public class CytoCellPanel {
     private JButton modelBrowseButton;
 
 
-
     //    SAVE & SHOW
     private JCheckBox showBinaryMaskCheckBox;
     private JCheckBox saveCellROIsCheckBox;
@@ -82,6 +85,7 @@ public class CytoCellPanel {
     private JSpinner minOverlapSpinner;
     private JLabel minCytoSizeLabel;
     private JSpinner minCytoSizeSpinner;
+    private JCheckBox finalValidationCheckBox;
 
     //    NON GUI
     private NucleiPanel nucleiPanel; /*Panel of nuclei to create association between cells and nuclei*/
@@ -104,13 +108,13 @@ public class CytoCellPanel {
             for (ImageToAnalyze ip : imagesNames) {
                 imageListModel.addElement(ip);
             }
-            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelByEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
             imageList.setSelectedIndex(0);
         }
         imageEndingField.addActionListener(e -> {
             imageEndingField.setText(imageEndingField.getText().trim());
             /*trim removes extra spaces*/
-            filteredImages = ImageToAnalyze.filterModelbyEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
+            filteredImages = ImageToAnalyze.filterModelByEnding((DefaultListModel<ImageToAnalyze>) imageList.getModel(), imageEndingField.getText(), imagesNames, errorImageEndingLabel);
         });
 
 //        ITEM LISTENERS : Add/Remove element of panel according to choice
@@ -134,7 +138,7 @@ public class CytoCellPanel {
                 if (!imageList.isSelectionEmpty()) {
 
                     ImageToAnalyze imageToPreview = imageList.getSelectedValue();
-                    String nameExperiment = getNameExperiment(imageToPreview);
+                    String nameExperiment = ImageToAnalyze.getNameExperiment(imageToPreview, imageEndingField);
                     CellDetector previewCD = getCellDetector(imageToPreview, nameExperiment, true);
                     SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                         @Override
@@ -155,9 +159,9 @@ public class CytoCellPanel {
 //        BUTTON TO CHOOSE CELLPOSE MODEL PATH
         modelBrowseButton.addActionListener(e -> {
             cellPoseModelPath = chooseCellposeModelFile(this.mainPanel);
-            if (cellPoseModelPath != null) {
+            if (cellPoseModelPath != null) { /*cellpose model path chosen*/
                 String path = cellPoseModelPath.getAbsolutePath();
-                if (path.split("\\\\").length > 2) {
+                if (path.split("\\\\").length > 2) { /*for visibility shorten the path to display*/
                     String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
                     modelPathField.setText("..." + path_shorten);
                 } else if (path.split("/").length > 2) {
@@ -173,7 +177,6 @@ public class CytoCellPanel {
 //    SETTERS
 
     /**
-     *
      * @param measurements : value corresponding to the measurements to do (bitwise operator)
      */
     public void setMeasurements(int measurements) {
@@ -181,7 +184,8 @@ public class CytoCellPanel {
     }
 
     /**
-     * Associate nucleis to cell and show options for cytoplasm if needed
+     * Associate nuclei to cell and show options for cytoplasm if needed
+     *
      * @param nucleiPanel : panel containing nuclei image to associate
      */
     public void setNucleiPanel(NucleiPanel nucleiPanel) {
@@ -192,23 +196,9 @@ public class CytoCellPanel {
 //    GETTERS
 
     /**
-     * return name without channel specific info (experiment name), to associate to other channels images
-     * @param imageToAnalyze : image
-     * @return name of "experiment"
-     */
-    private String getNameExperiment(ImageToAnalyze imageToAnalyze) {
-        if (imageEndingField.getText().length() == 0) { /*no filtering*/
-            return imageToAnalyze.getImageName();
-        } else {
-            return imageToAnalyze.getImageName().split(imageEndingField.getText())[0];
-        }
-    }
-
-    /**
-     *
      * @param imageToAnalyze : image
      * @param nameExperiment : name without channel info
-     * @param isPreview : if true, will not do measurements and always show images
+     * @param isPreview      : if true, will not do measurements and always show images
      * @return Detector object associated to image corresponding to cell channel
      */
     private CellDetector getCellDetector(ImageToAnalyze imageToAnalyze, String nameExperiment, boolean isPreview) {
@@ -239,9 +229,9 @@ public class CytoCellPanel {
 //        Projection ?
         if (isAZStackCheckBox.isSelected()) {
             if (chooseSlicesToUseCheckBox.isSelected()) {
-                cellDetector.setzStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()), (int) firstSliceSpinner.getValue(), (int) lastSliceSpinner.getValue());
+                cellDetector.setZStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()), (int) firstSliceSpinner.getValue(), (int) lastSliceSpinner.getValue());
             } else {
-                cellDetector.setzStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
+                cellDetector.setZStackParameters(zProjMethodsCombo.getItemAt(zProjMethodsCombo.getSelectedIndex()));
             }
         }
 //        Macro pretreatment?
@@ -255,7 +245,7 @@ public class CytoCellPanel {
             IJ.error("Please choose a model for cellpose.");
             return null;
         }
-        cellDetector.setDeeplearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellposeModel, cellPoseExcludeOnEdgesCheckBox.isSelected(), isPreview || showBinaryMaskCheckBox.isSelected());
+        cellDetector.setDeepLearning((Integer) cellPoseMinDiameterSpinner.getValue(), cellposeModel, cellPoseExcludeOnEdgesCheckBox.isSelected(), finalValidationCheckBox.isSelected(), isPreview || showBinaryMaskCheckBox.isSelected());
 
 //        Saving results ?
         if (saveSegmentationMaskCheckBox.isVisible()) {
@@ -268,8 +258,7 @@ public class CytoCellPanel {
 //    --> get all images associated to cell channel
 
     /**
-     *
-     * @return all cellDetectors corresponding to filtered images
+     * @return all {@link CellDetector} corresponding to filtered images
      */
     public ArrayList<CellDetector> getImages() {
         ArrayList<CellDetector> cyto = new ArrayList<>();
@@ -282,7 +271,7 @@ public class CytoCellPanel {
             addParametersToFile();
             for (int i = 0; i < imageListModel.getSize(); i++) {
                 image = imageListModel.getElementAt(i);
-                nameExperiment = getNameExperiment(image);
+                nameExperiment = ImageToAnalyze.getNameExperiment(image, imageEndingField);
                 CellDetector cellDetector = getCellDetector(image, nameExperiment, false);
                 if (cellDetector != null) {
                     cyto.add(getCellDetector(image, nameExperiment, false));
@@ -333,6 +322,7 @@ public class CytoCellPanel {
     /**
      * For {@link NucleiPanel} and {@link CytoCellPanel}
      * Allows choice of cellpose model
+     *
      * @param parent : {@link NucleiPanel} or {@link CytoCellPanel} main panel
      * @return File chosen corresponding to Cellpose Model
      */
@@ -378,7 +368,7 @@ public class CytoCellPanel {
 //        Macro
         useAMacroCheckBox.setSelected(Prefs.get("MICMAQ.useMacroCyto", false));
         if (!useAMacroCheckBox.isSelected()) macroPanel.setVisible(false);
-        macroArea.append(Prefs.get("MICMAQ.macroCyto", " ")); /*TODO default macro ?*/
+        macroArea.append(Prefs.get("MICMAQ.macroCyto", " "));
 
 
 //        Segmentation
@@ -388,13 +378,14 @@ public class CytoCellPanel {
         }
         cellPoseMinDiameterSpinner.setValue((int) Prefs.get("MICMAQ.cellposeCytoMinDiameter", 100));
         cellPoseExcludeOnEdgesCheckBox.setSelected(Prefs.get("MICMAQ.cellposeCytoExcludeOnEdges", true));
+        finalValidationCheckBox.setSelected(Prefs.get("MICMAQ.cytoFinalValidation", false));
         saveCellROIsCheckBox.setSelected(Prefs.get("MICMAQ.cytoSaveROI", true));
         saveSegmentationMaskCheckBox.setSelected(Prefs.get("MICMAQ.cytoSaveMask", true));
 
 //        Cytoplasm options
-        if (nucleiPanel!=null){
-            minCytoSizeSpinner.setValue(Prefs.get("MICMAQ.minCytoSize",25));
-            minOverlapSpinner.setValue(Prefs.get("MICMAQ.minOverlap",50));
+        if (nucleiPanel != null) {
+            minCytoSizeSpinner.setValue(Prefs.get("MICMAQ.minCytoSize", 25));
+            minOverlapSpinner.setValue(Prefs.get("MICMAQ.minOverlap", 50));
         }
 
 //        Show images ?
@@ -438,11 +429,12 @@ public class CytoCellPanel {
         Prefs.set("MICMAQ.cellposeCytoMethods", cellPoseModelCombo.getItemAt(cellPoseModelCombo.getSelectedIndex()));
         Prefs.set("MICMAQ.cellposeCytoMinDiameter", (double) (int) cellPoseMinDiameterSpinner.getValue());
         Prefs.set("MICMAQ.cellposeCytoExcludeOnEdges", cellPoseExcludeOnEdgesCheckBox.isSelected());
+        Prefs.set("MICMAQ.cytoFinalValidation", finalValidationCheckBox.isSelected());
         Prefs.set("MICMAQ.cytoSaveROI", saveCellROIsCheckBox.isSelected());
         Prefs.set("MICMAQ.cytoSaveMask", saveSegmentationMaskCheckBox.isSelected());
 
 //        Cytoplasm options
-        if(nucleiPanel!=null){
+        if (nucleiPanel != null) {
             Prefs.set("MICMAQ.minCytoSize", (Double) minCytoSizeSpinner.getValue());
             Prefs.set("MICMAQ.minOverlap", (Double) minCytoSizeSpinner.getValue());
         }
@@ -457,22 +449,24 @@ public class CytoCellPanel {
     }
 
 //    --> GUI
+
     /**
      * Show or not saving results checkbox
-     * @param wantToSave : true if need to show savings checkbox
+     *
+     * @param wantToSave : true if there is a need to show savings checkbox
      */
-    public void showResultsCheckBox(boolean wantToSave) {
+    public void saveResultsCheckBox(boolean wantToSave) {
         saveCellROIsCheckBox.setVisible(wantToSave);
         saveSegmentationMaskCheckBox.setVisible(wantToSave);
     }
 
     /**
-     *
      * @return panel containing everything
      */
     public JPanel getMainPanel() {
         return mainPanel;
     }
+
     /**
      * Customize panel elements
      */
@@ -522,12 +516,6 @@ public class CytoCellPanel {
         showBinaryMaskCheckBox.setText("Show segmentation(s) mask(s)");
         showBinaryMaskCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
         deepLearningPanel.add(showBinaryMaskCheckBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveCellROIsCheckBox = new JCheckBox();
-        saveCellROIsCheckBox.setText("Save all ROIs");
-        deepLearningPanel.add(saveCellROIsCheckBox, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        saveSegmentationMaskCheckBox = new JCheckBox();
-        saveSegmentationMaskCheckBox.setText("Save segmentation(s) mask(s)");
-        deepLearningPanel.add(saveSegmentationMaskCheckBox, new GridConstraints(5, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         showCompositeImageCheckBox = new JCheckBox();
         showCompositeImageCheckBox.setText("Show composite image");
         showCompositeImageCheckBox.setToolTipText("Warning ! Process will pause after each set of images' measurement");
@@ -563,6 +551,15 @@ public class CytoCellPanel {
         minCytoSizeLabel.setText("Minimal size of cytoplasm (% of cell)");
         cytoParametersPanel.add(minCytoSizeLabel, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cytoParametersPanel.add(minCytoSizeSpinner, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        saveSegmentationMaskCheckBox = new JCheckBox();
+        saveSegmentationMaskCheckBox.setText("Save segmentation(s) mask(s)");
+        deepLearningPanel.add(saveSegmentationMaskCheckBox, new GridConstraints(5, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        saveCellROIsCheckBox = new JCheckBox();
+        saveCellROIsCheckBox.setText("Save all ROIs");
+        deepLearningPanel.add(saveCellROIsCheckBox, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        finalValidationCheckBox = new JCheckBox();
+        finalValidationCheckBox.setText("Final validation");
+        deepLearningPanel.add(finalValidationCheckBox, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         previewButton = new JButton();
         previewButton.setText("Preview");
         mainPanel.add(previewButton, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));

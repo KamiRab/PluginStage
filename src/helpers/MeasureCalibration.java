@@ -1,4 +1,4 @@
-package Helpers;
+package helpers;
 
 import ij.IJ;
 import ij.Prefs;
@@ -8,9 +8,11 @@ import java.util.ArrayList;
 
 import static ij.IJ.d2s;
 
-//TODO if perimeter not squared !!!
 /**
- * Class to define calibration and parse calibration file
+ * Author : Camille RABIER
+ * Date : 08/08/2022
+ * Class for
+ * - defining calibration and parse calibration file
  */
 public class MeasureCalibration {
     private final String name; /*name of calibration*/
@@ -100,7 +102,7 @@ public class MeasureCalibration {
                 return getCalibrationFromFile(); /* With file existing, it can be parsed */
             } catch (IOException ex) { /*If the file can not be created, display error message*/
                 IJ.error(calibration_filename+" could not be found and could not be created." +
-                        "It could be a problem of access rights of the ImageJ/Fiji preferences folder."); /*TODO expert option for other directory ?*/
+                        "It could be a problem of access rights of the ImageJ/Fiji preferences folder.");
                 ex.printStackTrace();
             }
         } catch (IOException e) { /*If the file can not be read, display error message*/
@@ -192,17 +194,5 @@ public class MeasureCalibration {
         /*convert micro in greek letter */
         String unitMod = unit.startsWith("um")?"\u03BCm":unit;
         return name+"(x"+ d2s(pixelLength,3) +" "+ unitMod+")";
-    }
-
-    /**
-     * Used for tests
-     * @param args : arguments
-     */
-    public static void main(String[] args) {
-        ArrayList<MeasureCalibration> measureCalibrations = getCalibrationFromFile();
-        for (MeasureCalibration c: measureCalibrations
-             ) {
-            IJ.log(c.toString());
-        }
     }
 }

@@ -1,15 +1,19 @@
-package Detectors;
+package detectors;
 
-import Helpers.MeasureCalibration;
+import helpers.MeasureCalibration;
 import ij.IJ;
-import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.measure.ResultsTable;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-
+/**
+ * Author : Camille RABIER
+ * Date : 31/03/2022
+ * Class for
+ * - associating different channels of a set of experience
+ */
 public class Experiment {
     private final NucleiDetector nuclei;
     private final CellDetector cell;
@@ -22,40 +26,62 @@ public class Experiment {
 
     private final MeasureCalibration measureCalibration;
 
-    public Experiment(NucleiDetector nuclei, CellDetector cytoplasm, ArrayList<SpotDetector> spots, ResultsTable finalResultsCellSpot, ResultsTable finalResultsNuclei, MeasureCalibration measureCalibration) {
-        this.nuclei = nuclei;
-        this.cell = cytoplasm;
-        this.spots = spots;
-        if (nuclei!=null) this.experimentName = nuclei.getNameExperiment();
-        else if (cytoplasm!=null) this.experimentName = cytoplasm.getNameExperiment();
-        else if (spots.size()>0) this.experimentName = spots.get(0).getNameExperiment();
+    /**
+     * Constructor
+     * @param nucleiDetector : {@link NucleiDetector}
+     * @param cellDetector : {@link CellDetector}
+     * @param spotDetectors :{@link ArrayList} of {@link SpotDetector}
+     * @param finalResultsCellSpot : ResultsTable corresponding to measure in cell/cytoplasm or nuclei if no cell
+     * @param finalResultsNuclei : ResultsTable corresponding to measure in nuclei if cell
+     * @param measureCalibration : calibration to use for measures
+     */
+    public Experiment(NucleiDetector nucleiDetector, CellDetector cellDetector, ArrayList<SpotDetector> spotDetectors, ResultsTable finalResultsCellSpot, ResultsTable finalResultsNuclei, MeasureCalibration measureCalibration) {
+        this.nuclei = nucleiDetector;
+        this.cell = cellDetector;
+        this.spots = spotDetectors;
+        if (nucleiDetector!=null) this.experimentName = nucleiDetector.getNameExperiment();
+        else if (cellDetector!=null) this.experimentName = cellDetector.getNameExperiment();
+        else if (spotDetectors.size()>0) this.experimentName = spotDetectors.get(0).getNameExperiment();
         else this.experimentName = null;
         this.finalResultsNuclei = finalResultsNuclei;
         this.finalResultsCellSpot = finalResultsCellSpot;
         this.measureCalibration=measureCalibration;
     }
 
+    /**
+     *
+     * @return name without channel specific information
+     */
+    public String getExperimentName() {
+        return experimentName;
+    }
+
+    /**
+     * Do segmentation and detection for channel concerned and aggregates the measurements done in ResultTable(s)
+     * @return true if everything worked
+     */
     public boolean run() {
-        Instant dateBegin = Instant.now();
-//        int[] idsToKeep = WindowManager.getIDList();
+        Instant dateBegin = Instant.now(); /*get starting time*/
+//        PREPARE NECESSARY IMAGES FOR MEASUREMENTS
+//        --> Cells images
         if (cell !=null && !interrupt){
             IJ.log("Cell/Cytoplasm image: "+ cell.getImageTitle());
             cell.setMeasureCalibration(measureCalibration);
             if (!cell.prepare()) {
                 interrupt=true;
-//                PluginCellProt.closeAllWindows("The process for " + experimentName + " has been interrupted.", idsToKeep);
                 return false;
             }
         }
+//        --> Nuclei images
         if (nuclei!=null && !interrupt){
             IJ.log("Nuclei image: "+nuclei.getImageTitle());
             nuclei.setMeasureCalibration(measureCalibration);
             if (!nuclei.prepare()) {
                 interrupt=true;
-//                PluginCellProt.closeAllWindows("The process for " + experimentName + " has been interrupted.", idsToKeep);
                 return false;
             }
         }
+//        --> Spots images
         for (int i = 0; i < spots.size(); i++) {
             if (!interrupt){
                 IJ.log("Spot channel "+(i+1)+ " image:" + spots.get(i).getImageTitle());
@@ -63,11 +89,11 @@ public class Experiment {
                 spot.setMeasureCalibration(measureCalibration);
                 if (!spot.prepare()) {
                     interrupt=true;
-//                    PluginCellProt.closeAllWindows("The process for " + experimentName + " has been interrupted.", idsToKeep);
                     return false;
                 }
             }
         }
+//        Prepare cytoplasm and get the ROIs for spot detection
         Roi[] cellRois = null;
         Roi[] nucleiRois = null;
         Roi[] cytoplasmRois = null;
@@ -76,7 +102,7 @@ public class Experiment {
         CytoDetector cytoDetector = null;
         if (cell!=null && !interrupt){
             cellRois = cell.getRoiArray();
-            if (nuclei!=null){
+            if (nuclei!=null){ /*Prepare cytoplasm et get new cellRois*/
                 cytoDetector = cell.getCytoDetector();
                 cytoDetector.setNucleiRois(nuclei.getRoiArray());
                 cytoDetector.setMeasureCalibration(measureCalibration);
@@ -85,19 +111,18 @@ public class Experiment {
                 cytoplasmRois = cytoDetector.getCytoRois();
                 cellRois = cytoDetector.getCellRois();
                 cell.setCellRois(cellRois);
-//                nuclei.setNucleiRois(nucleiRois);
             }
             numberOfObject = cellRois.length;
-        }else {
-            if (nuclei!=null && !interrupt){
+        }else { /*No cell images*/
+            if (nuclei!=null && !interrupt){ /*But nuclei images*/
                 nucleiRois = nuclei.getRoiArray();
                 numberOfObject = nucleiRois.length;
-            } else {
+            } else { /*Only spot images*/
                 numberOfObject = 1;
                 onlySpot = true;
             }
         }
-        if (cell!=null && nuclei!=null && !interrupt){
+        if (cell!=null && nuclei!=null && !interrupt){ /*Get result table for all nuclei in addition to cell ResultTable*/
             Roi[] allNuclei = nuclei.getRoiArray();
             int[] association2Cell = cytoDetector.getAssociationCell2Nuclei();
             for (int nucleusID = 0; nucleusID < allNuclei.length; nucleusID++) {
@@ -112,6 +137,7 @@ public class Experiment {
             }
             nuclei.setNucleiAssociatedRois(nucleiRois);
         }
+//        Measurements for each cell or nuclei or image (in case of only spot)
         for (int cellID = 0; cellID < numberOfObject; cellID++) {
             if (!interrupt){
                 finalResultsCellSpot.addValue("Name experiment", experimentName);
@@ -130,47 +156,21 @@ public class Experiment {
                     if (nucleiRois!=null && cellRois==null)spot.analysisPerRegion(cellID,nucleiRois[cellID], finalResultsCellSpot,"Nuclei");
                     if (cytoplasmRois!=null)spot.analysisPerRegion(cellID, cytoplasmRois[cellID], finalResultsCellSpot,"Cytoplasm");
                     if (onlySpot) spot.analysisPerRegion(cellID,null, finalResultsCellSpot,"Image");
-                    IJ.log("spot done");
                 }
                 finalResultsCellSpot.incrementCounter();
             }
         }
-//        if (idsToKeep!=null&&WindowManager.getIDList()!=null&&idsToKeep.length!=WindowManager.getIDList().length) {
-//            PluginCellProt.closeAllWindows(experimentName + " analysis is done", idsToKeep);
-//        }
+//        TIMING OF EXPERIENCE
         Instant dateEnd = Instant.now();
         long duration = Duration.between(dateBegin,dateEnd).toMillis();
         IJ.log("Experiment "+experimentName+" is done in :" +duration/1000+" seconds");
         return true;
     }
 
+    /**
+     * interrupt process if error or user clicked on cancel button
+     */
     public void interruptProcess() {
         interrupt = true;
-    }
-
-    public static void main(String[] args) {
-        ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        NucleiDetector nucleiDetector = new NucleiDetector(DAPI, "WT_HU_Ac-2re--cell003"/*,false*/,"C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/", true);
-        nucleiDetector.setzStackParameters("Maximum projection");
-        nucleiDetector.setMeasureCalibration(new MeasureCalibration());
-        nucleiDetector.setSegmentation(false,true);
-        nucleiDetector.setThresholdMethod("Li", 1000, false, true);
-        ArrayList<SpotDetector> spotDetectorArrayList = new ArrayList<>();
-        ImagePlus protein1 = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        SpotDetector spotDetector1 = new SpotDetector(protein1, "CY5", "WT_HU_Ac-2re--cell003", "C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);
-        spotDetector1.setRollingBallSize(20);
-        spotDetector1.setzStackParameters("Maximum projection");
-        spotDetector1.setSpotByThreshold("Li", 10, false,true);
-        spotDetector1.setSpotByfindMaxima(1000,true);
-        spotDetectorArrayList.add(spotDetector1);
-        ImagePlus protein2 = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-        SpotDetector spotDetector2 = new SpotDetector(protein2, "FITC", "WT_HU_Ac-2re--cell003", "C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/",true);
-        spotDetector1.setRollingBallSize(100);
-        spotDetector2.setzStackParameters("Maximum projection");
-        spotDetector2.setSpotByThreshold("Li", 100, false,true);
-        spotDetector2.setSpotByfindMaxima(500,true);
-        spotDetectorArrayList.add(spotDetector2);
-        ResultsTable finalResults = new ResultsTable();
-        new Experiment(nucleiDetector, null, spotDetectorArrayList, null,finalResults,new MeasureCalibration()).run();
     }
 }

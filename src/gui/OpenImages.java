@@ -1,11 +1,10 @@
-package GUI;
+package gui;
 
-import Helpers.ImageToAnalyze;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import helpers.ImageToAnalyze;
 import ij.IJ;
-import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
 import ij.io.OpenDialog;
@@ -17,7 +16,13 @@ import java.awt.event.ItemEvent;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Locale;
-
+/**
+ * Author : Camille RABIER
+ * Date : 15/03/2022
+ * GUI Class for
+ * - choosing to use open images or images from repertory
+ * - choose repertory or image to use
+ */
 public class OpenImages extends JFrame implements PlugIn {
     //    GUI :
     private JPanel mainPanel;
@@ -43,7 +48,7 @@ public class OpenImages extends JFrame implements PlugIn {
     private JPanel directoryImages;
     //    Choose directory
     private JButton chooseDirectoryButton;
-    private JTextArea choosenDirectory;
+    private JTextArea chosenDirectory;
     private JScrollPane imageListScroll;
     //    Extension of images to consider
     private JLabel extensionLabel;
@@ -97,28 +102,8 @@ public class OpenImages extends JFrame implements PlugIn {
 //      DIRECTORY PANEL
         //        Set up extension fields
         otherExtensionField.setVisible(false);
-        extension.setSelectedItem(Prefs.get("MICMAQ.ChoiceExtension", ".TIF"));
         otherExtensionField.setText(Prefs.get("MICMAQ.ChoiceExtension", ".TIF"));
-
-        chooseDirectoryButton.addActionListener(e -> {
-            directory = chooseDirectory(OpenImages.this);
-            if (directory != null) {
-                String path = directory.getAbsolutePath();
-//                Shorten path to show only the 2 last subdirectories
-                if (path.split("\\\\").length > 2) {
-                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
-                    choosenDirectory.setText("..." + path_shorten);
-                } else if (path.split("/").length > 2) {
-                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("/")).lastIndexOf("/"));
-                    choosenDirectory.setText("..." + path_shorten);
-                } else {
-                    choosenDirectory.setText(path);
-                }
-
-//              Get images from the directory
-                getFilesFromDirectory();
-            }
-        });
+        extension.setSelectedItem(Prefs.get("MICMAQ.ChoiceExtension", ".TIF"));
         extension.addItemListener(e -> {
             String extensionSelected = (String) extension.getSelectedItem();
             if (extensionSelected.equals("Other")) { /*If extension wanted not in Jlist*/
@@ -133,10 +118,30 @@ public class OpenImages extends JFrame implements PlugIn {
                 getFilesFromDirectory();
             }
         });
-
         otherExtensionField.addActionListener(e -> {
             if (ipList != null && ipList.length > 0) getFilesFromDirectory();
         });
+
+        chooseDirectoryButton.addActionListener(e -> {
+            directory = chooseDirectory(OpenImages.this);
+            if (directory != null) {
+                String path = directory.getAbsolutePath();
+//                Shorten path to show only the 2 last subdirectories
+                if (path.split("\\\\").length > 2) {
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("\\")).lastIndexOf("\\"));
+                    chosenDirectory.setText("..." + path_shorten);
+                } else if (path.split("/").length > 2) {
+                    String path_shorten = path.substring(path.substring(0, path.lastIndexOf("/")).lastIndexOf("/"));
+                    chosenDirectory.setText("..." + path_shorten);
+                } else {
+                    chosenDirectory.setText(path);
+                }
+
+//              Get images from the directory
+                getFilesFromDirectory();
+            }
+        });
+
 
 //        OPEN IMAGE PANEL
 //        Display selected image
@@ -244,6 +249,7 @@ public class OpenImages extends JFrame implements PlugIn {
     public void run(String s) {
         createUIComponents();
         setTitle("MIC-MAQ");
+
         setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/IconPlugin.png")));
         setContentPane(this.mainPanel);
         setPreferredSize(new Dimension(500, 300));
@@ -270,19 +276,6 @@ public class OpenImages extends JFrame implements PlugIn {
             preTextChoiceImage.setText("There are no open images, please choose a directory");
             useDirectory = true;
         }
-    }
-
-    public static void main(String[] args) {
-        ImagePlus[] imagesToAnalyze = new ImagePlus[3];
-        imagesToAnalyze[0] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        imagesToAnalyze[1] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w11 CY5.TIF");
-        imagesToAnalyze[2] = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w21 FITC.TIF");
-        for (ImagePlus images : imagesToAnalyze
-        ) {
-            images.show();
-        }
-        OpenImages openImages = new OpenImages();
-        openImages.run(null);
     }
 
     /**
@@ -350,11 +343,11 @@ public class OpenImages extends JFrame implements PlugIn {
         chooseDirectoryButton = new JButton();
         chooseDirectoryButton.setText("Choose directory");
         directoryImages.add(chooseDirectoryButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        choosenDirectory = new JTextArea();
-        choosenDirectory.setLineWrap(true);
-        choosenDirectory.setText("No directory choosen");
-        choosenDirectory.setWrapStyleWord(true);
-        directoryImages.add(choosenDirectory, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        chosenDirectory = new JTextArea();
+        chosenDirectory.setLineWrap(true);
+        chosenDirectory.setText("No directory choosen");
+        chosenDirectory.setWrapStyleWord(true);
+        directoryImages.add(chosenDirectory, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         imageListScroll = new JScrollPane();
         directoryImages.add(imageListScroll, new GridConstraints(4, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         imageList.setEnabled(true);

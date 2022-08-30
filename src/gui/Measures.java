@@ -1,4 +1,4 @@
-package GUI;
+package gui;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -8,10 +8,14 @@ import ij.measure.Measurements;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.util.ArrayList;
-
+/**
+ * Author : Camille RABIER
+ * Date : 18/04/2022
+ * GUI Class for
+ * - defining measures to use for cells or nuclei
+ */
 public class Measures extends JFrame {
-    private PluginCellProt.MeasureValue measurementsValueClass;
+    private final PluginCellProt.MeasureValue measurementsValueClass;
     private JCheckBox stdDevCheckBoxSelected;
     private JCheckBox feretCheckBox;
     private JCheckBox areaCheckBox;
@@ -32,120 +36,79 @@ public class Measures extends JFrame {
     private JButton validateButton;
     private JButton cancelButton;
     private JPanel mainPanel;
-    private final ArrayList<String> measurementsNames = new ArrayList<>();
-    //    private String[] measurements_names;
     private Integer measurementsValue;
 
     public Measures(String type, PluginCellProt.MeasureValue measures) {
         getPrefs(type);
         this.measurementsValueClass = measures;
         validateButton.addActionListener(e -> {
+//            GET MEASUREMENTS VALUE
             measurementsValue = Measurements.MEAN + Measurements.INTEGRATED_DENSITY + Measurements.AREA;
-//            if (areaCheckBox.isSelected()) {
-//                measurementsValue += Measurements.AREA;
-//                measurementsNames.add("Area");
-//            }
             if (stdDevCheckBoxSelected.isSelected()) {
                 measurementsValue += Measurements.STD_DEV;
-                measurementsNames.add("StdDev");
             }
             if (minMaxCheckBox.isSelected()) {
                 measurementsValue += Measurements.MIN_MAX;
-                measurementsNames.add("Min");
-                measurementsNames.add("Max");
             }
             if (centerOfMassCheckBoxSelected.isSelected()) {
                 measurementsValue += Measurements.CENTER_OF_MASS;
-                measurementsNames.add("XM");
-                measurementsNames.add("YM");
             }
             if (rectCheckBox.isSelected()) {
                 measurementsValue += Measurements.RECT;
-                measurementsNames.add("BX");
-                measurementsNames.add("BY");
-                measurementsNames.add("Width");
-                measurementsNames.add("Height");
             }
             if (shapeDescriptorsCheckBoxSelected.isSelected()) {
                 measurementsValue += Measurements.SHAPE_DESCRIPTORS;
-                measurementsNames.add("Circ");
-                measurementsNames.add("AR");
-                measurementsNames.add("Round");
-                measurementsNames.add("Solidity");
             }
-//            if (integratedDensityCheckBoxSelected.isSelected()) {
-//                measurementsValue += Measurements.INTEGRATED_DENSITY;
-////                    measurements_names.add("IntDen");
-//                measurementsNames.add("RawIntDen");
-//            }
             if (skewnessCheckBox.isSelected()) {
                 measurementsValue += Measurements.SKEWNESS;
-                measurementsNames.add("Skew");
             }
             if (areaFractionCheckBoxSelected.isSelected()) {
                 measurementsValue += Measurements.AREA_FRACTION;
-                measurementsNames.add("%Area");
             }
-//            if (meanCheckBox.isSelected()) {
-//                measurementsValue += Measurements.MEAN;
-//                measurementsNames.add("Mean");
-//            }
             if (modeCheckBox.isSelected()) {
                 measurementsValue += Measurements.MODE;
-                measurementsNames.add("Mode");
             }
             if (centroidCheckBox.isSelected()) {
                 measurementsValue += Measurements.CENTROID;
-                measurementsNames.add("X");
-                measurementsNames.add("Y");
             }
             if (perimeterCheckBox.isSelected()) {
                 measurementsValue += Measurements.PERIMETER;
-                measurementsNames.add("Perim.");
             }
             if (ellipseCheckBox.isSelected()) {/*Fit Ellipse*/
                 measurementsValue += Measurements.ELLIPSE;
-                measurementsNames.add("Major");
-                measurementsNames.add("Minor");
-                measurementsNames.add("Angle");
             }
             if (feretCheckBox.isSelected()) {
                 measurementsValue += Measurements.FERET;
-                measurementsNames.add("Feret");
-                measurementsNames.add("FeretX");
-                measurementsNames.add("FeretY");
-                measurementsNames.add("FeretAngle");
-                measurementsNames.add("MinFeret");
             }
             if (medianCheckBox.isSelected()) {
                 measurementsValue += Measurements.MEDIAN;
-                measurementsNames.add("Median");
             }
             if (kurtosisCheckBox.isSelected()) {
                 measurementsValue += Measurements.KURTOSIS;
-                measurementsNames.add("Kurt");
             }
             Prefs.set("MICMAQ.Measurements_" + type, measurementsValue);
             measurementsValueClass.setMeasure(measurementsValue);
             Prefs.savePreferences();
-//            assignMeasurementsValue(measures);
             setVisible(false);
         });
         cancelButton.addActionListener(e -> dispose());
     }
 
+//    PREFS
+
+    /**
+     * Preset the checkbox according to prefs
+     * @param type : Cell or Nuclei
+     */
     private void getPrefs(String type) {
         int measurements = (int) Prefs.get("MICMAQ.Measurements_" + type, (Measurements.AREA + Measurements.MEAN + Measurements.INTEGRATED_DENSITY));
-//        areaCheckBox.setSelected((measurements & Measurements.AREA) != 0);
         stdDevCheckBoxSelected.setSelected((measurements & Measurements.STD_DEV) != 0);
         minMaxCheckBox.setSelected((measurements & Measurements.MIN_MAX) != 0);
         centerOfMassCheckBoxSelected.setSelected((measurements & Measurements.CENTER_OF_MASS) != 0);
         rectCheckBox.setSelected((measurements & Measurements.RECT) != 0);
         shapeDescriptorsCheckBoxSelected.setSelected((measurements & Measurements.SHAPE_DESCRIPTORS) != 0);
-//        integratedDensityCheckBoxSelected.setSelected((measurements & Measurements.INTEGRATED_DENSITY) != 0);
         skewnessCheckBox.setSelected((measurements & Measurements.SKEWNESS) != 0);
         areaFractionCheckBoxSelected.setSelected((measurements & Measurements.AREA_FRACTION) != 0);
-//        meanCheckBox.setSelected((measurements & Measurements.MEAN) != 0);
         centroidCheckBox.setSelected((measurements & Measurements.CENTROID) != 0);
         perimeterCheckBox.setSelected((measurements & Measurements.PERIMETER) != 0);
         ellipseCheckBox.setSelected((measurements & Measurements.ELLIPSE) != 0);
@@ -154,9 +117,6 @@ public class Measures extends JFrame {
         kurtosisCheckBox.setSelected((measurements & Measurements.KURTOSIS) != 0);
     }
 
-//    public int getMeasurements() {
-//        return measurementsValue;
-//    }
 
     public void run() {
         setTitle("Choose measurements");

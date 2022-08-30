@@ -1,6 +1,6 @@
-package Detectors;
+package detectors;
 
-import Helpers.MeasureCalibration;
+import helpers.MeasureCalibration;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.NewImage;
@@ -15,6 +15,8 @@ import ij.process.ImageProcessor;
 import static ij.IJ.d2s;
 
 /**
+ * Created by : Camille RABIER
+ * Date : 13/04/2022
  * Class with common methods for spots and nuclei :
  * - Z-projection
  * - Thresholding
@@ -53,6 +55,10 @@ public class Detector {
 
 //    SETTER
 
+    /**
+     *
+     * @param measureCalibration calibration to use for measurements (conversion pixel to um for example)
+     */
     public void setMeasureCalibration(MeasureCalibration measureCalibration){
         this.measureCalibration=measureCalibration;
     }
@@ -78,13 +84,17 @@ public class Detector {
      *                        Maximum size of particle if the max value possible
      */
     public void setThresholdParameters(String thresholdMethod, boolean excludeOnEdges,double minSizeParticle){
-        this.thresholdMethod = thresholdMethod + " dark"; /*TODO is the bkg always dark ?*/
+        this.thresholdMethod = thresholdMethod + " dark";/*always dark background*/
         this.excludeOnEdges = excludeOnEdges;
         this.minSizeParticle = minSizeParticle;
     }
 
 //    GETTER
 
+    /**
+     *
+     * @return image that either does not need a projection or is already projected or null if it needs projection
+     */
     public ImagePlus getImage() {
         if (image.getNSlices()>1){
             IJ.error("The image "+ image +" is a stack, please precise the Z-projection parameters");
@@ -103,12 +113,11 @@ public class Detector {
     private void projection() {
         if (this.image.getNSlices()>1){
             if (zStackProjMethod.equals("Maximum projection")) {
-                this.image = ZProjector.run(image, "max", zStackFirstSlice, zStackLastSlice); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
+                this.image = ZProjector.run(image, "max", zStackFirstSlice, zStackLastSlice); /*projects Stack to only one image by maximal intensity projection*/
             } else {
-                this.image = ZProjector.run(image, "sd", zStackFirstSlice, zStackLastSlice); /*projette stack en une seule image avec à chaque pixel correspondant au maximum d'intensité*/
+                this.image = ZProjector.run(image, "sd", zStackFirstSlice, zStackLastSlice); /*projects Stack to only one image by standard deviation projection*/
             }
             renameImage(this.image,"projection");
-//            IJ.log("The z-projection for "+ this.name_image + " is done.");
         } else {
             IJ.log("The image "+ this.image+" is not a stack.");
         }
@@ -172,7 +181,7 @@ public class Detector {
 //        Analyze
         ParticleAnalyzer.setRoiManager(roiManager);
         ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(analyzer_option,0,null,minSizeParticle,Integer.MAX_VALUE);
-        particleAnalyzer.analyze(threshold_IP); /*TODO throws array out of bound index*/
+        particleAnalyzer.analyze(threshold_IP);
         thresholdRois = roiManager.getRoisAsArray();
 //        Get binary mask output and renames it
         ImagePlus mask_IP= binaryImage();
@@ -182,15 +191,16 @@ public class Detector {
 
     /**
      * Uses the ROIs found in getThresholdMask (thresholdRois)
-     * @return ImagePlus with an intensity per particle
+     * @param rois : region of all the objects segmented
+     * @return ImagePlus with an intensity per object
      */
     public ImagePlus labeledImage(Roi[] rois){
         ImagePlus ip = NewImage.createShortImage("labeledImage",image.getWidth(),image.getHeight(),1,NewImage.FILL_BLACK);
         int color = 1;
-        for (int i = 0; i < rois.length; i++) {
+        for (Roi points : rois) {
             ip.getProcessor().setColor(color);
-            if (rois[i]!=null){
-                ip.getProcessor().fill(rois[i]);
+            if (points != null) {
+                ip.getProcessor().fill(points);
                 color++;
             }
         }
@@ -200,10 +210,10 @@ public class Detector {
 
     /**
      * Do the same as the previous labeledImage, but without renaming the image and in static.
-     * @param imageHeight
-     * @param imageWidth
-     * @param rois
-     * @return
+     * @param imageHeight : height of segmented image
+     * @param imageWidth : width of segmented image
+     * @param rois : : region of all the objects segmented
+     * @return image with an intensity per object
      */
     public static ImagePlus labeledImage(int imageWidth,int imageHeight, Roi[] rois){
         ImagePlus imagePlus = NewImage.createShortImage("labeledImage",imageWidth,imageHeight,1,NewImage.FILL_BLACK);
@@ -230,10 +240,9 @@ public class Detector {
     /**
      *
      * @param binary_threshold_proc : processor of mask, already ByteProcessor
-     * @return ImagePlus corresponding to watersheded binary image
+     * @return ImagePlus corresponding to watershed binary image
      */
     public ImagePlus getWatershed(ImageProcessor binary_threshold_proc) {
-//        ByteProcessor binary_threshold_proc = threshold_proc.convertToByteProcessor();
         EDM edm = new EDM();
         edm.toWatershed(binary_threshold_proc);
         return new ImagePlus(nameImage+"_watershed",binary_threshold_proc);
@@ -286,7 +295,6 @@ public class Detector {
                     customMeasures.addValue(preNameColumn +" "+measure+" ("+ measureCalibration.getUnit()+")", d2s(rawMeasures.getValue("Area", nucleus)* measureCalibration.getPixelArea()));
                 }
             }else if (!measure.equals("IntDen")){
-//                String test2 = d2s(rawMeasures.getValue(measure,nucleus));
                 if (nucleus == -1){
                     customMeasures.addValue(preNameColumn +" "+measure,Double.NaN);
                 }else {
@@ -304,7 +312,6 @@ public class Detector {
             }else if (measure.equals("IntDen")){
                 continue;
             }else{
-//                String test2 = d2s(rawMeasures.getValue(measure,nucleus));
                 customMeasures.addValue(preNameColumn +" "+measure,d2s(0));
             }
         }
@@ -313,12 +320,12 @@ public class Detector {
      * Summarize results : from an entire ResultsTable create one line for another resultTable
      * For area, adding of with calibration column
      * Removal of IntDen column (RawIntDen is equal)
-     * Differenciation between mean of mean and arithmetic mean
+     * Differentiation between mean of mean and arithmetic mean
      * RawIntDen and Area are summed, the other use means
      *
      * @param rawMeasures    : ResultTable with measures of all spots not summarized
      * @param customMeasures : ResultTable that will contain the summarized results
-     * @param prenameColumn : prefixe for column
+     * @param prenameColumn : prefix for column
      */
     public void setSummarizedResults(ResultsTable rawMeasures, ResultsTable customMeasures, String prenameColumn) {
         for (String measure : rawMeasures.getHeadings()){
@@ -331,7 +338,6 @@ public class Detector {
                 case "IntDen":
                     continue;
                 case "Mean":
-//                    customMeasures.addValue(name_object + "threshold Mean of " + measure, d2s(mean(rawMeasures.getColumn(measure))));
                     break;
                 case "RawIntDen":
                     customMeasures.addValue(prenameColumn + " threshold "+ measure,d2s(sum(rawMeasures.getColumn(measure))));
@@ -355,22 +361,5 @@ public class Detector {
             sum+= value;
         }
         return sum;
-    }
-
-    /**
-     * Test for the class
-     * @param args arguments to give to main. Here always null
-     */
-    public static void main(String[] args) {
-        ImagePlus DAPI = IJ.openImage("C:/Users/Camille/Downloads/Camille_Stage2022/Macro 1_Foci_Noyaux/Images/WT_HU_Ac-2re--cell003_w31 DAPI 405.TIF");
-        Detector detector = new Detector(DAPI,"Nucleus");
-        detector.setMeasureCalibration(new MeasureCalibration());
-        detector.setzStackParameters("Maximum projection",0,DAPI.getNSlices());
-        detector.setThresholdParameters("Li",true,1000);
-        ImagePlus test = detector.getThresholdMask(detector.getImage());
-        test.show();
-        test.setDisplayRange(0,25);
-        test.updateAndDraw();
-        DAPI.show();
     }
 }
